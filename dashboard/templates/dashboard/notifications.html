@@ -1,0 +1,38 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Notifications - Price Tracker{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
+    <div>
+      <h2 class="fw-bold">Notifications</h2>
+      <p class="text-muted">Recent updates and alerts from your tracked items.</p>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-primary">Mark all read</button>
+    </form>
+  </div>
+
+  <div class="list-group">
+    {% for notif in notifs %}
+    <div class="list-group-item rounded-4 mb-3 border-0 shadow-sm {% if not notif.read %}bg-light{% endif %}">
+      <div class="d-flex align-items-start gap-3">
+        <div class="bg-white rounded-circle d-flex align-items-center justify-content-center" style="width:44px; height:44px; border:1px solid #e9ecef;">
+          <i class="fas {{ notif.icon_class }} text-primary"></i>
+        </div>
+        <div class="flex-fill">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <h6 class="mb-0">{{ notif.title }}</h6>
+            {% if not notif.read %}<span class="badge bg-primary">New</span>{% endif %}
+          </div>
+          <p class="mb-1">{{ notif.body }}</p>
+          <small class="text-muted">{{ notif.time }}</small>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">No notifications available.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

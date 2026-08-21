@@ -1,0 +1,82 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Add Product - Price Tracker{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
+    <div>
+      <h2 class="fw-bold">Add Product Manually</h2>
+      <p class="text-muted">Fill in the details to start tracking a new product.</p>
+    </div>
+    <a href="{% url 'dashboard:products' %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+
+  <div class="card rounded-4 shadow-sm border-0 p-4">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-4">
+        {{ form.non_field_errors }}
+        <div class="col-12">
+          <label class="form-label">Product Name</label>
+          {{ form.name }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Category</label>
+          {{ form.category }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Platform</label>
+          {{ form.platform }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Current Price</label>
+          {{ form.current_price }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Original Price</label>
+          {{ form.original_price }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Lowest Price</label>
+          {{ form.lowest_price }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Trend</label>
+          {{ form.trend }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Stock Status</label>
+          {{ form.stock }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Rating</label>
+          {{ form.rating }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Reviews</label>
+          {{ form.reviews }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Product URL</label>
+          {{ form.url }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Image URL</label>
+          {{ form.image_url }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Description</label>
+          {{ form.description }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Prediction</label>
+          {{ form.prediction }}
+        </div>
+        <div class="col-12 d-flex gap-3">
+          <button type="submit" class="btn btn-primary">Save Product</button>
+          <a href="{% url 'dashboard:products' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

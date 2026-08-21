@@ -1,0 +1,60 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Analytics - Price Tracker{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
+    <div>
+      <h2 class="fw-bold">Analytics</h2>
+      <p class="text-muted">Your savings and tracking insights in one place.</p>
+    </div>
+    <a href="#" class="btn btn-outline-primary">Export PDF</a>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card rounded-4 shadow-sm border-0 p-4">
+        <p class="text-uppercase text-muted small mb-2">Total Saved</p>
+        <h3 class="fw-bold">₹36,400</h3>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card rounded-4 shadow-sm border-0 p-4">
+        <p class="text-uppercase text-muted small mb-2">This Month</p>
+        <h3 class="fw-bold">₹7,600</h3>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card rounded-4 shadow-sm border-0 p-4">
+        <p class="text-uppercase text-muted small mb-2">Avg Discount</p>
+        <h3 class="fw-bold">29.4%</h3>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card rounded-4 shadow-sm border-0 p-4">
+        <p class="text-uppercase text-muted small mb-2">Best Deal</p>
+        <h3 class="fw-bold">50% off</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="card rounded-4 shadow-sm border-0 p-4 mb-4">
+    <h5 class="fw-semibold mb-3">Monthly Savings</h5>
+    <div class="placeholder rounded-4 bg-light" style="height:240px"></div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-6">
+      <div class="card rounded-4 shadow-sm border-0 p-4">
+        <h5 class="fw-semibold mb-3">Store Comparison</h5>
+        <div class="placeholder rounded-4 bg-light" style="height:180px"></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card rounded-4 shadow-sm border-0 p-4">
+        <h5 class="fw-semibold mb-3">Top Categories</h5>
+        <div class="placeholder rounded-4 bg-light" style="height:180px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
