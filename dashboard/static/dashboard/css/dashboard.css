@@ -38,6 +38,21 @@
 .sidebar-brand small { font-size: .62rem; }
 .dashboard-page .card { border-radius: 12px !important; border: 1px solid #edf0f5 !important; box-shadow: 0 2px 8px rgba(16, 24, 40, .04) !important; }
 .dashboard-page .navbar { min-height: 54px; }
+.topbar { height: 58px; min-height: 58px !important; padding: 0 .85rem; gap: .65rem; }
+.topbar-toggle { width: 30px; height: 30px; padding: 0; border: 0; background: transparent; color: #98a2b3; font-size: .9rem; }
+.topbar-search { max-width: 345px; margin-left: .15rem; }
+.topbar-search .input-group { height: 34px; border: 1px solid #e4e7ec; border-radius: 999px; overflow: hidden; background: #fbfcfe; }
+.topbar-search .input-group-text, .topbar-search .form-control { border: 0; background: transparent; color: #98a2b3; font-size: .72rem; }
+.topbar-search .input-group-text { padding-left: .8rem; padding-right: .3rem; }
+.topbar-search .form-control:focus { box-shadow: none; }
+.topbar-search .form-control::placeholder { color: #98a2b3; }
+.topbar-date { color: #98a2b3; font-size: .65rem; margin-right: .1rem; }
+.topbar-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: #98a2b3; background: #f8f9fb; text-decoration: none; font-size: .78rem; }
+.notification-badge { position: absolute; top: -3px; right: -2px; min-width: 15px; height: 15px; padding: 1px 4px; border-radius: 999px; color: #fff; background: #5b4bfa; font-size: .58rem; line-height: 13px; text-align: center; }
+.topbar-add, .topbar-track { display: inline-flex; align-items: center; gap: .45rem; height: 32px; padding: 0 .75rem; border-radius: 999px; text-decoration: none; font-size: .7rem; font-weight: 500; }
+.topbar-add { color: #344054; border: 1px solid #e4e7ec; background: #fff; }
+.topbar-track { color: #fff; background: #5b4bfa; }
+.topbar-add i, .topbar-track i { font-size: .65rem; }
 .dashboard-page main { background: #f7f9fc; }
 .dashboard-hero { background: linear-gradient(110deg, #4b36f5, #783bf5); border-radius: 12px; padding: 1.6rem 1.7rem; }
 .dashboard-hero h1 { max-width: 250px; font-size: 1.5rem; line-height: 1.12; }
