@@ -7,6 +7,8 @@ from .models import (
     Platform,
     PriceAlert,
     Product,
+    ProductListing,
+    PriceHistory,
     ProductImage,
     Review,
 )
@@ -43,6 +45,20 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ["platform", "category", "stock", "wishlisted", "tracked"]
     search_fields = ["name", "platform__name", "category__name"]
     inlines = [ProductImageInline, CouponInline, ReviewInline]
+
+
+@admin.register(ProductListing)
+class ProductListingAdmin(admin.ModelAdmin):
+    list_display = ["product", "platform", "seller", "current_price", "mrp", "availability", "last_updated"]
+    list_filter = ["platform", "availability"]
+    search_fields = ["product__name", "external_product_id", "seller"]
+
+
+@admin.register(PriceHistory)
+class PriceHistoryAdmin(admin.ModelAdmin):
+    list_display = ["product_listing", "price", "recorded_at"]
+    list_filter = ["product_listing__platform"]
+    search_fields = ["product_listing__product__name", "product_listing__external_product_id"]
 
 
 @admin.register(PriceAlert)

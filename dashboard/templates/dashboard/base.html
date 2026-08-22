@@ -43,7 +43,7 @@
             </div>
           </form>
           <div class="d-flex align-items-center gap-2 ms-auto">
-            <span class="text-muted d-none d-sm-inline">07 Jul 2026</span>
+            <span class="text-muted d-none d-sm-inline">{% now "d M Y" %}</span>
             <a href="{% url 'dashboard:notifications' %}" class="btn btn-light position-relative">
               <i class="fas fa-bell"></i>
               <span class="badge bg-danger rounded-circle position-absolute top-0 start-100 translate-middle">{{ notifications_count|default:0 }}</span>

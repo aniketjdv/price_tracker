@@ -11,11 +11,17 @@ from .models import (
     PriceAlert,
     Product,
     ProductImage,
+    ProductListing,
     Review,
 )
+from .services import ensure_demo_data
 
 
 def ensure_sample_data():
+    ensure_demo_data()
+    return
+
+    # Legacy presentation fixtures retained below for reference only.
     if Platform.objects.exists():
         return
 
@@ -234,21 +240,13 @@ def products(request):
 
 
 def product_detail(request, product_id):
+    ensure_demo_data()
     product = get_object_or_404(Product, id=product_id)
-    price_history = [
-        {"date": "Jun 8", "price": 29990},
-        {"date": "Jun 12", "price": 28500},
-        {"date": "Jun 16", "price": 27990},
-        {"date": "Jun 20", "price": 26999},
-        {"date": "Jun 24", "price": 25990},
-        {"date": "Jun 28", "price": 25490},
-        {"date": "Jul 2", "price": 24990},
-    ]
+    listings = ProductListing.objects.filter(product=product).select_related("platform")
+    price_history = list(product.listings.first().price_history.values("recorded_at", "price")) if product.listings.exists() else []
     store_compare = [
-        {"store": "Amazon", "price": 24990, "shipping": "Free", "delivery": "Tomorrow", "in_stock": True},
-        {"store": "Flipkart", "price": 25490, "shipping": "Free", "delivery": "2 days", "in_stock": True},
-        {"store": "Croma", "price": 26990, "shipping": "₹99", "delivery": "3 days", "in_stock": True},
-        {"store": "Reliance Digital", "price": 27990, "shipping": "Free", "delivery": "4 days", "in_stock": False},
+        {"store": listing.platform.name, "price": listing.current_price, "shipping": "Free", "delivery": "2 days", "in_stock": listing.availability}
+        for listing in listings
     ]
     return render(request, "dashboard/product_detail.html", {
         "product": product,

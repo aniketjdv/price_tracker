@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -124,3 +125,10 @@ STATICFILES_DIRS = [BASE_DIR / 'dashboard' / 'static']
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+ECOMMERCE_PROVIDER = os.getenv("ECOMMERCE_PROVIDER", "simulator")
+AMAZON_API_KEY = os.getenv("AMAZON_API_KEY", "")
+AMAZON_API_SECRET = os.getenv("AMAZON_API_SECRET", "")
+AMAZON_PARTNER_TAG = os.getenv("AMAZON_PARTNER_TAG", "")
+FLIPKART_API_KEY = os.getenv("FLIPKART_API_KEY", "")
+FLIPKART_AFFILIATE_ID = os.getenv("FLIPKART_AFFILIATE_ID", "")

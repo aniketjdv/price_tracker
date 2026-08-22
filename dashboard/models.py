@@ -48,6 +48,7 @@ class Product(models.Model):
     ]
 
     name = models.CharField(max_length=255)
+    brand = models.CharField(max_length=100, blank=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name="products")
     platform = models.ForeignKey(Platform, on_delete=models.SET_NULL, null=True, related_name="products")
@@ -83,6 +84,41 @@ class Product(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)[:255]
         super().save(*args, **kwargs)
+
+
+class ProductListing(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="listings")
+    platform = models.ForeignKey(Platform, on_delete=models.SET_NULL, null=True, related_name="listings")
+    external_product_id = models.CharField(max_length=100)
+    seller = models.CharField(max_length=150, blank=True)
+    current_price = models.DecimalField(max_digits=10, decimal_places=2)
+    mrp = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    discount_percentage = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    availability = models.BooleanField(default=True)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=0)
+    review_count = models.PositiveIntegerField(default=0)
+    product_url = models.URLField(blank=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["platform", "external_product_id"], name="unique_platform_external_product")]
+        ordering = ["current_price"]
+
+    def __str__(self):
+        return f"{self.product.name} - {self.platform}"
+
+
+class PriceHistory(models.Model):
+    product_listing = models.ForeignKey(ProductListing, on_delete=models.CASCADE, related_name="price_history")
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    recorded_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["recorded_at"]
+        indexes = [models.Index(fields=["product_listing", "recorded_at"])]
+
+    def __str__(self):
+        return f"{self.product_listing} - {self.price}"
 
 
 class ProductImage(models.Model):

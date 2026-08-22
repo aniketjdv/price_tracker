@@ -20,7 +20,7 @@
               <h5 class="fw-bold mb-1">{{ alert.product.name }}</h5>
               <p class="text-muted mb-0">{{ alert.product.platform.name }}</p>
             </div>
-            <span class="badge bg-{{ alert.status == 'triggered'|yesno:'success,primary' }}">{{ alert.get_status_display }}</span>
+            {% comment %} <span class="badge bg-{{ alert.status == 'triggered'|yesno:'success,primary' }}">{{ alert.get_status_display }}</span> {% endcomment %}
           </div>
           <div class="row text-center mb-3">
             <div class="col-4">

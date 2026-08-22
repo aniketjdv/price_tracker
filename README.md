@@ -24,4 +24,26 @@
 
   - The React/Vite frontend has been removed and replaced with Django templates using Bootstrap.
   - The app stores data in `db.sqlite3`.
+
+   ## Simulated provider
+
+   The default provider is a deterministic local simulator. Its responses use the same provider contract as future marketplace integrations and are clearly marked with `source: simulator`; they are not data from Amazon, Flipkart, or any other real store.
+
+   Seed 60 products, five marketplace listings per product, and 60 days of history:
+
+   `python manage.py seed_simulator_data`
+
+   Optional controls are `--count`, `--days`, `--seed`, and `--reset`.
+
+   Generate a new price and history point for every listing:
+
+   `python manage.py update_simulated_prices`
+
+   ## Provider configuration
+
+   Copy `.env.example` to `.env` and set `ECOMMERCE_PROVIDER=simulator`. The Django settings read future Amazon and Flipkart credentials from environment variables only. To add a real integration, implement the four methods in `AmazonProvider` or `FlipkartProvider`; the models, services, templates, and views consume the shared provider interface.
+
+   ## Data model
+
+   `Product` stores the shared catalog item. `ProductListing` stores marketplace-specific IDs, sellers, URLs, availability, and current prices. `PriceHistory` stores timestamped prices for each listing, which keeps comparison and ML inputs independent from the provider implementation.
   

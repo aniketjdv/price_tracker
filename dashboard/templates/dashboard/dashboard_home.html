@@ -5,14 +5,16 @@
   <div class="row g-4">
     <div class="col-12">
       <div class="bg-primary text-white rounded-4 p-4 position-relative overflow-hidden">
+          <h4>Welcome, {{ request.user.get_username|default:"User" }}</h4>
         <h1 class="fw-bold">Track Prices. Save More.</h1>
         <p class="mb-4 text-white-50">Monitor prices across Amazon, Flipkart, Myntra, and more. Get instant alerts when prices drop to your target.</p>
         <div class="d-flex flex-wrap gap-2">
           <a href="#" class="btn btn-light btn-lg text-primary">Track New Product</a>
           <a href="#" class="btn btn-outline-light btn-lg text-white">View Analytics</a>
         </div>
-        <div class="bg-white opacity-10 rounded-circle position-absolute" style="width:160px;height:160px;top:-40px;right:-40px;"></div>
-      </div>
+         <div class="bg-white opacity-10 rounded-circle position-absolute" style="width:160px;height:160px;top:-40px;right:-40px;"></div>
+        
+      </div> 
     </div>
 
     <div class="col-12 col-xl-3">
