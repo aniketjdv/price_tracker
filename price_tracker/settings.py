@@ -126,6 +126,10 @@ STATICFILES_DIRS = [BASE_DIR / 'dashboard' / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGIN_URL = "dashboard:login"
+LOGIN_REDIRECT_URL = "dashboard:dashboard_home"
+LOGOUT_REDIRECT_URL = "dashboard:login"
+
 ECOMMERCE_PROVIDER = os.getenv("ECOMMERCE_PROVIDER", "simulator")
 AMAZON_API_KEY = os.getenv("AMAZON_API_KEY", "")
 AMAZON_API_SECRET = os.getenv("AMAZON_API_SECRET", "")

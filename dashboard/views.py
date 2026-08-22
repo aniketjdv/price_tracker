@@ -1,8 +1,13 @@
 from datetime import date
 
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.models import User
+from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import PriceAlertForm, ProductForm
+from .forms import PriceAlertForm, ProductForm, SignupForm
 from .models import (
     Category,
     Coupon,
@@ -12,9 +17,61 @@ from .models import (
     Product,
     ProductImage,
     ProductListing,
+    PriceHistory,
+    PriceAlert,
     Review,
 )
 from .services import ensure_demo_data
+
+
+class TrackerLoginView(LoginView):
+    template_name = "dashboard/login.html"
+    redirect_authenticated_user = True
+
+
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard:dashboard_home")
+    form = SignupForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        login(request, user)
+        return redirect("dashboard:dashboard_home")
+    return render(request, "dashboard/signup.html", {"form": form})
+
+
+def staff_required(view):
+    return user_passes_test(lambda user: user.is_active and user.is_staff, login_url="dashboard:login")(view)
+
+
+@staff_required
+def admin_dashboard(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+        user_id = request.POST.get("user_id")
+        user = get_object_or_404(User, id=user_id)
+        if action == "toggle_active" and user != request.user:
+            user.is_active = not user.is_active
+            user.save(update_fields=["is_active"])
+        elif action == "toggle_staff" and user != request.user:
+            user.is_staff = not user.is_staff
+            user.save(update_fields=["is_staff"])
+        elif action == "delete_user" and user != request.user:
+            user.delete()
+        return redirect("dashboard:admin_dashboard")
+
+    users = User.objects.order_by("-date_joined")
+    context = {
+        "users": users,
+        "user_count": User.objects.count(),
+        "active_user_count": User.objects.filter(is_active=True).count(),
+        "product_count": Product.objects.count(),
+        "listing_count": ProductListing.objects.count(),
+        "history_count": PriceHistory.objects.count(),
+        "alert_count": PriceAlert.objects.count(),
+        "recent_products": Product.objects.order_by("-created_at")[:6],
+    }
+    return render(request, "dashboard/admin_dashboard.html", context)
 
 
 def ensure_sample_data():
@@ -190,10 +247,15 @@ def dashboard_home(request):
     lowest_price = Product.objects.order_by("lowest_price").first()
     active_alerts = PriceAlert.objects.filter(status=PriceAlert.STATUS_WATCHING).count()
     recent_drops = Product.objects.filter(trend="down").order_by("-updated_at")[:4]
+    if not recent_drops:
+        recent_drops = Product.objects.order_by("-updated_at")[:4]
     platforms = Platform.objects.all()
     platform_distribution = [
-        {"name": platform.name, "value": products_per_platform(platform)} for platform in platforms
+        {"name": platform.name, "color": platform.color, "value": products_per_platform(platform)} for platform in platforms
     ]
+    platform_total = sum(item["value"] for item in platform_distribution) or 1
+    for item in platform_distribution:
+        item["percent"] = round(item["value"] * 100 / platform_total)
     context = {
         "total_products": total_products,
         "price_drops": price_drops,

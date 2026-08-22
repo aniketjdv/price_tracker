@@ -5,6 +5,10 @@ from . import views
 app_name = 'dashboard'
 
 urlpatterns = [
+    path('login/', views.TrackerLoginView.as_view(), name='login'),
+    path('signup/', views.signup, name='signup'),
+    path('logout/', views.LogoutView.as_view(), name='logout'),
+    path('site-admin/', views.admin_dashboard, name='admin_dashboard'),
     path('', views.dashboard_home, name='dashboard_home'),
     path('products/', views.products, name='products'),
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),

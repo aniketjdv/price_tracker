@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create account - PricePulse</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="{% static 'dashboard/css/dashboard.css' %}?v=3" />
+</head>
+<body class="auth-page">
+  <main class="auth-single auth-signup-page">
+    <div class="auth-brand"><i class="fas fa-chart-line"></i></div>
+    <h1>Create your account</h1>
+    <p class="auth-subtitle">Start tracking prices in 2 minutes</p>
+    <section class="auth-card">
+      {% if form.non_field_errors %}<div class="alert alert-danger py-2 small">Please correct the errors below.</div>{% endif %}
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="auth-field"><label for="id_first_name">FULL NAME</label><div class="auth-input"><i class="far fa-user"></i>{{ form.first_name }}</div>{% for error in form.first_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        <div class="auth-field"><label for="id_email">EMAIL</label><div class="auth-input"><i class="far fa-envelope"></i>{{ form.email }}</div>{% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        <div class="auth-field"><label for="id_username">USERNAME</label><div class="auth-input"><i class="fas fa-at"></i>{{ form.username }}</div>{% for error in form.username.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        <div class="auth-field"><label for="id_password1">PASSWORD</label><div class="auth-input"><i class="fas fa-lock"></i>{{ form.password1 }}</div>{% for error in form.password1.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        <div class="auth-field"><label for="id_password2">CONFIRM PASSWORD</label><div class="auth-input"><i class="fas fa-lock"></i>{{ form.password2 }}</div>{% for error in form.password2.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        <button class="auth-submit" type="submit">Create Account</button>
+      </form>
+      <p class="auth-signup">Already have an account? <a href="{% url 'dashboard:login' %}">Sign in</a></p>
+    </section>
+  </main>
+</body>
+</html>
