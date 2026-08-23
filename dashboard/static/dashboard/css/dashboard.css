@@ -54,6 +54,14 @@
 .topbar-track { color: #fff; background: #5b4bfa; }
 .topbar-add i, .topbar-track i { font-size: .65rem; }
 .dashboard-page main { background: #f7f9fc; }
+.dark-mode, .dark-mode main { color: #e5e7eb; background: #111827; }
+.dark-mode .sidebar, .dark-mode .topbar, .dark-mode .card { background: #1f2937 !important; color: #e5e7eb; border-color: #374151 !important; }
+.dark-mode main { background: #111827; }
+.dark-mode .dashboard-page main, .dark-mode .dashboard-card small, .dark-mode .text-muted { color: #9ca3af !important; }
+.dark-mode .form-control, .dark-mode .input-group { background: #111827; color: #e5e7eb; border-color: #4b5563; }
+.dark-mode .form-control::placeholder { color: #9ca3af; }
+.dark-mode .sidebar .list-group-item { color: #d1d5db; background: transparent; }
+.dark-mode .sidebar .list-group-item.active { color: #a5b4fc; background: #312e81; }
 .dashboard-hero { background: linear-gradient(110deg, #4b36f5, #783bf5); border-radius: 12px; padding: 1.6rem 1.7rem; }
 .dashboard-hero h1 { max-width: 250px; font-size: 1.5rem; line-height: 1.12; }
 .dashboard-hero p { max-width: 470px; font-size: .72rem; }
@@ -77,6 +85,8 @@
 .recent-table { font-size: .72rem; }
 .recent-table th { color: #98a2b3; font-size: .62rem; font-weight: 500; }
 .product-thumb { width: 34px; height: 34px; object-fit: cover; border-radius: 7px; }
+.avatar { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; }
+.settings-profile-photo { width: 72px; height: 72px; object-fit: cover; border-radius: 50%; display: block; }
 @media (max-width: 700px) {
   .sidebar { width: 72px; min-width: 72px; }
   .sidebar .sidebar-brand { padding-left: .9rem !important; padding-right: .9rem !important; }

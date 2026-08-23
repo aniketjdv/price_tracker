@@ -22,6 +22,18 @@ CATALOG = [
     ("Accessories", "Apple AirPods Pro (2nd Generation)", "Apple", 24900),
 ]
 MARKETPLACES = ["Amazon", "Flipkart", "Myntra", "Croma", "Reliance Digital"]
+IMAGE_URLS = {
+    "Mobiles": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&h=600&fit=crop&auto=format",
+    "Laptops": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop&auto=format",
+    "Headphones": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format",
+    "Televisions": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&h=600&fit=crop&auto=format",
+    "Cameras": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=600&fit=crop&auto=format",
+    "Smart Watches": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop&auto=format",
+    "Gaming": "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=600&h=600&fit=crop&auto=format",
+    "Home Appliances": "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&h=600&fit=crop&auto=format",
+    "Fashion": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop&auto=format",
+    "Accessories": "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=600&h=600&fit=crop&auto=format",
+}
 
 
 class SimulatorProvider(EcommerceProvider):
@@ -51,7 +63,7 @@ class SimulatorProvider(EcommerceProvider):
             "rating": round(self.random.uniform(3.8, 4.8), 1),
             "review_count": self.random.randint(120, 25000),
             "product_url": f"https://example.com/{marketplace.lower().replace(' ', '-')}/product/{external_id}",
-            "image_url": f"https://images.unsplash.com/photo-{1500000000000 + index}?w=600&h=600&fit=crop&auto=format",
+            "image_url": IMAGE_URLS[category],
             "seller": f"{marketplace} Marketplace Seller",
         }
 

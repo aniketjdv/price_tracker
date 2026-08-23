@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import PriceAlertForm, ProductForm, SignupForm
+from .forms import PriceAlertForm, ProductForm, ProfileForm, SignupForm
 from .models import (
     Category,
     Coupon,
@@ -20,6 +20,7 @@ from .models import (
     PriceHistory,
     PriceAlert,
     Review,
+    UserProfile,
 )
 from .services import ensure_demo_data
 
@@ -304,6 +305,7 @@ def products(request):
 def product_detail(request, product_id):
     ensure_demo_data()
     product = get_object_or_404(Product, id=product_id)
+    savings = (product.original_price or 0) - product.current_price
     listings = ProductListing.objects.filter(product=product).select_related("platform")
     price_history = list(product.listings.first().price_history.values("recorded_at", "price")) if product.listings.exists() else []
     store_compare = [
@@ -312,6 +314,7 @@ def product_detail(request, product_id):
     ]
     return render(request, "dashboard/product_detail.html", {
         "product": product,
+        "savings": savings,
         "price_history": price_history,
         "store_compare": store_compare,
     })
@@ -350,8 +353,14 @@ def notifications(request):
     return render(request, "dashboard/notifications.html", {"notifs": notifs})
 
 
+@login_required
 def settings_page(request):
-    return render(request, "dashboard/settings.html")
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    form = ProfileForm(request.POST or None, request.FILES or None, instance=profile, user=request.user)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("dashboard:settings")
+    return render(request, "dashboard/settings.html", {"form": form})
 
 
 def add_product(request):
