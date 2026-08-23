@@ -1,54 +1,406 @@
 {% extends 'dashboard/base.html' %}
+{% load humanize %}
 {% block title %}Price Alerts - Price Tracker{% endblock %}
 {% block content %}
 <div class="container-fluid">
+  <!-- Page Header -->
   <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
     <div>
-      <h2 class="fw-bold">Price Alerts</h2>
-      <p class="text-muted">Manage alerts and see triggered price drops.</p>
+      <h2 class="fw-bold mb-1">Price Alerts</h2>
+      <p class="text-muted mb-0">Monitor product prices and get notified instantly when prices drop.</p>
     </div>
-    <a href="{% url 'dashboard:add_product' %}" class="btn btn-primary">New Alert</a>
+    <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#newAlertModal">
+      <i class="fas fa-plus"></i>
+      <span>New Alert</span>
+    </button>
   </div>
 
-  <div class="row g-4">
-    {% for alert in alerts %}
-    <div class="col-12 col-md-6">
-      <div class="card rounded-4 shadow-sm border-0 h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div>
-              <h5 class="fw-bold mb-1">{{ alert.product.name }}</h5>
-              <p class="text-muted mb-0">{{ alert.product.platform.name }}</p>
-            </div>
-            {% comment %} <span class="badge bg-{{ alert.status == 'triggered'|yesno:'success,primary' }}">{{ alert.get_status_display }}</span> {% endcomment %}
+  <!-- Metric Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-4">
+      <div class="card rounded-4 shadow-sm border-0 p-3 h-100 bg-white">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-bell fs-5"></i>
           </div>
-          <div class="row text-center mb-3">
-            <div class="col-4">
-              <p class="text-muted small mb-1">Target</p>
-              <p class="fw-bold">₹{{ alert.target_price|floatformat:0 }}</p>
-            </div>
-            <div class="col-4">
-              <p class="text-muted small mb-1">Current</p>
-              <p class="fw-bold">₹{{ alert.current_price|floatformat:0 }}</p>
-            </div>
-            <div class="col-4">
-              <p class="text-muted small mb-1">Notify</p>
-              <p class="small mb-0">{{ alert.email_on|yesno:'Email,' }}{{ alert.sms_on|yesno:' SMS,' }}</p>
-            </div>
-          </div>
-          <div class="d-flex gap-2 flex-wrap">
-            <a href="{% url 'dashboard:product_detail' alert.product.id %}" class="btn btn-outline-primary btn-sm">View</a>
-            <button class="btn btn-outline-secondary btn-sm">Edit</button>
-            <button class="btn btn-outline-danger btn-sm">Delete</button>
+          <div>
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Total Alerts</p>
+            <h3 class="fw-bold mb-0">{{ total_count }}</h3>
           </div>
         </div>
       </div>
     </div>
+    <div class="col-12 col-sm-6 col-xl-4">
+      <div class="card rounded-4 shadow-sm border-0 p-3 h-100 bg-white">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-info-subtle text-info d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-eye fs-5"></i>
+          </div>
+          <div>
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Active Watching</p>
+            <h3 class="fw-bold mb-0">{{ watching_count }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-4">
+      <div class="card rounded-4 shadow-sm border-0 p-3 h-100 bg-white">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-check-circle fs-5"></i>
+          </div>
+          <div>
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Triggered</p>
+            <h3 class="fw-bold mb-0">{{ triggered_count }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="card rounded-4 shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+      <div class="row g-3 align-items-center justify-content-between">
+        <!-- Status Tabs -->
+        <div class="col-12 col-md-auto">
+          <div class="btn-group" role="group" aria-label="Status filter">
+            <a href="{% url 'dashboard:price_alerts' %}{% if query %}?q={{ query }}{% endif %}" class="btn btn-sm {% if selected_status == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              All ({{ total_count }})
+            </a>
+            <a href="{% url 'dashboard:price_alerts' %}?status=watching{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm {% if selected_status == 'watching' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              <i class="fas fa-eye me-1"></i>Watching ({{ watching_count }})
+            </a>
+            <a href="{% url 'dashboard:price_alerts' %}?status=triggered{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm {% if selected_status == 'triggered' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              <i class="fas fa-check me-1"></i>Triggered ({{ triggered_count }})
+            </a>
+          </div>
+        </div>
+
+        <!-- Search input -->
+        <div class="col-12 col-md-5 col-lg-4">
+          <form method="get" class="d-flex gap-2">
+            {% if selected_status != 'all' %}
+              <input type="hidden" name="status" value="{{ selected_status }}" />
+            {% endif %}
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+              <input type="text" name="q" value="{{ query }}" class="form-control border-start-0 ps-0" placeholder="Search by product..." />
+              {% if query %}
+                <a href="{% url 'dashboard:price_alerts' %}{% if selected_status != 'all' %}?status={{ selected_status }}{% endif %}" class="btn btn-outline-secondary" title="Clear search">
+                  <i class="fas fa-times"></i>
+                </a>
+              {% endif %}
+              <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Grid -->
+  <div class="row g-4">
+    {% for alert in alerts %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card rounded-4 shadow-sm border-0 h-100 d-flex flex-column bg-white">
+        <div class="card-body d-flex flex-column p-4">
+          <!-- Card Header: Image, Title, Platform & Status -->
+          <div class="d-flex gap-3 mb-3">
+            <img src="{{ alert.product.image_url }}" alt="{{ alert.product.name }}" class="rounded-3" style="width: 56px; height: 56px; object-fit: cover;" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&auto=format';" />
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                {% if alert.product.platform %}
+                  <span class="badge small px-2 py-1" style="background-color: {{ alert.product.platform.bg_color }}; color: {{ alert.product.platform.color }};">
+                    {{ alert.product.platform.name }}
+                  </span>
+                {% endif %}
+                {% if alert.status == 'triggered' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                    <i class="fas fa-check-circle me-1"></i>Triggered
+                  </span>
+                {% else %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                    <i class="fas fa-eye me-1"></i>Watching
+                  </span>
+                {% endif %}
+              </div>
+              <h6 class="fw-bold mb-0 text-truncate" title="{{ alert.product.name }}">
+                <a href="{% url 'dashboard:product_detail' alert.product.id %}" class="text-dark text-decoration-none">
+                  {{ alert.product.name }}
+                </a>
+              </h6>
+            </div>
+          </div>
+
+          <!-- Price Details Box -->
+          <div class="bg-light rounded-3 p-3 mb-3 text-center">
+            <div class="row g-2 align-items-center">
+              <div class="col-6 border-end">
+                <p class="text-muted small mb-0 text-uppercase fw-semibold">Target Price</p>
+                <p class="fs-5 fw-bold text-primary mb-0">₹{{ alert.target_price|floatformat:0|intcomma }}</p>
+              </div>
+              <div class="col-6">
+                <p class="text-muted small mb-0 text-uppercase fw-semibold">Current Price</p>
+                <p class="fs-5 fw-bold text-dark mb-0">₹{{ alert.current_price|floatformat:0|intcomma }}</p>
+              </div>
+            </div>
+            <div class="mt-2 pt-2 border-top">
+              {% if alert.is_target_met %}
+                <span class="badge bg-success text-white">
+                  <i class="fas fa-check me-1"></i>Target Met! (₹{{ alert.diff|slice:"1:"|floatformat:0|intcomma|default:"0" }} lower)
+                </span>
+              {% else %}
+                <span class="text-muted small">
+                  <i class="fas fa-arrow-down text-info me-1"></i>₹{{ alert.diff|floatformat:0|intcomma }} drop needed to trigger
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Notification Channels & Timestamp -->
+          <div class="d-flex align-items-center justify-content-between mb-3 small text-muted">
+            <div class="d-flex align-items-center gap-1">
+              <span>Notify via:</span>
+              {% if alert.email_on %}
+                <span class="badge bg-light text-dark border"><i class="fas fa-envelope text-primary me-1"></i>Email</span>
+              {% endif %}
+              {% if alert.sms_on %}
+                <span class="badge bg-light text-dark border"><i class="fas fa-sms text-success me-1"></i>SMS</span>
+              {% endif %}
+              {% if not alert.email_on and not alert.sms_on %}
+                <span class="badge bg-light text-muted border">None</span>
+              {% endif %}
+            </div>
+            <span title="Created {{ alert.created_at }}"><i class="far fa-clock me-1"></i>{{ alert.created_at|date:"d M" }}</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="mt-auto pt-2 border-top d-flex gap-2 justify-content-between align-items-center">
+            <a href="{% url 'dashboard:product_detail' alert.product.id %}" class="btn btn-outline-primary btn-sm flex-fill">
+              <i class="fas fa-arrow-up-right-from-square me-1"></i>View
+            </a>
+            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-bs-toggle="modal" data-bs-target="#editAlertModal-{{ alert.id }}">
+              <i class="fas fa-pen me-1"></i>Edit
+            </button>
+            {% if alert.status == 'triggered' %}
+              <form method="post" action="{% url 'dashboard:toggle_alert_status' alert.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-success btn-sm" title="Re-activate alert to watching status">
+                  <i class="fas fa-rotate-left"></i>
+                </button>
+              </form>
+            {% endif %}
+            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAlertModal-{{ alert.id }}" title="Delete alert">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal for Alert #{{ alert.id }} -->
+    <div class="modal fade" id="editAlertModal-{{ alert.id }}" tabindex="-1" aria-labelledby="editAlertLabel-{{ alert.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+          <form method="post" action="{% url 'dashboard:edit_price_alert' alert.id %}">
+            {% csrf_token %}
+            <div class="modal-header border-0 pb-0">
+              <h5 class="modal-title fw-bold" id="editAlertLabel-{{ alert.id }}">Edit Price Alert</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+              <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded-3">
+                <img src="{{ alert.product.image_url }}" alt="{{ alert.product.name }}" class="rounded-3" style="width: 48px; height: 48px; object-fit: cover;" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&auto=format';" />
+                <div class="overflow-hidden">
+                  <h6 class="fw-bold mb-0 text-truncate">{{ alert.product.name }}</h6>
+                  <p class="text-muted small mb-0">Current Price: <strong>₹{{ alert.current_price|floatformat:0 }}</strong></p>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Target Price (₹)</label>
+                <div class="input-group">
+                  <span class="input-group-text">₹</span>
+                  <input type="number" step="1" name="target_price" value="{{ alert.target_price|floatformat:0 }}" class="form-control" required />
+                </div>
+                <small class="text-muted">You will be notified when the price reaches or drops below this amount.</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Alert Status</label>
+                <select name="status" class="form-select">
+                  <option value="watching"{% if alert.status == 'watching' %} selected{% endif %}>Watching (Active)</option>
+                  <option value="triggered"{% if alert.status == 'triggered' %} selected{% endif %}>Triggered</option>
+                </select>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label fw-semibold">Notification Channels</label>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" name="email_on" id="editEmail-{{ alert.id }}" {% if alert.email_on %}checked{% endif %} />
+                  <label class="form-check-label" for="editEmail-{{ alert.id }}">Email Notification</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="sms_on" id="editSms-{{ alert.id }}" {% if alert.sms_on %}checked{% endif %} />
+                  <label class="form-check-label" for="editSms-{{ alert.id }}">SMS Notification</label>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Modal for Alert #{{ alert.id }} -->
+    <div class="modal fade" id="deleteAlertModal-{{ alert.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+          <form method="post" action="{% url 'dashboard:delete_price_alert' alert.id %}">
+            {% csrf_token %}
+            <div class="modal-header border-0 pb-0">
+              <h5 class="modal-title fw-bold text-danger">Delete Price Alert</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+              <p class="mb-0">Are you sure you want to delete the price alert for <strong>{{ alert.product.name }}</strong>?</p>
+              <small class="text-muted">You will no longer receive price-drop notifications for this target price.</small>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-danger">Delete Alert</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     {% empty %}
     <div class="col-12">
-      <div class="alert alert-info">No active alerts yet.</div>
+      <div class="card rounded-4 shadow-sm border-0 p-5 text-center bg-white">
+        <div class="py-4">
+          <div class="rounded-circle bg-light d-inline-flex p-4 mb-3 text-muted">
+            <i class="fas fa-bell-slash fs-1"></i>
+          </div>
+          <h4 class="fw-bold mb-2">No price alerts found</h4>
+          <p class="text-muted mb-4 max-w-md mx-auto">
+            {% if query or selected_status != 'all' %}
+              No alerts match your current filter or search criteria.
+            {% else %}
+              You haven't set up any price alerts yet. Start tracking items to get alerted when prices drop!
+            {% endif %}
+          </p>
+          <div class="d-flex justify-content-center gap-2">
+            {% if query or selected_status != 'all' %}
+              <a href="{% url 'dashboard:price_alerts' %}" class="btn btn-outline-secondary">Reset Filters</a>
+            {% endif %}
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAlertModal">
+              <i class="fas fa-plus me-1"></i>Create Alert
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     {% endfor %}
   </div>
 </div>
+
+<!-- Create New Alert Modal -->
+<div class="modal fade" id="newAlertModal" tabindex="-1" aria-labelledby="newAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <form method="post" action="{% url 'dashboard:create_price_alert' %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="newAlertModalLabel">Create Price Alert</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-3">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="newAlertProduct">Select Product</label>
+            <select name="product" id="newAlertProduct" class="form-select" required onchange="updateProductPreview(this)">
+              <option value="" disabled selected>-- Choose a product --</option>
+              {% for prod in products %}
+                <option value="{{ prod.id }}" data-price="{{ prod.current_price }}" data-image="{{ prod.image_url }}" data-name="{{ prod.name }}" data-platform="{{ prod.platform.name|default:'' }}">
+                  {{ prod.name }} (₹{{ prod.current_price|floatformat:0 }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div id="productPreviewBox" class="p-3 bg-light rounded-3 mb-3 d-none">
+            <div class="d-flex align-items-center gap-3">
+              <img id="previewImage" src="" alt="Product" class="rounded-3" style="width: 44px; height: 44px; object-fit: cover;" />
+              <div class="overflow-hidden">
+                <p id="previewName" class="fw-bold mb-0 text-truncate small"></p>
+                <p class="text-muted small mb-0">Current Price: <strong class="text-dark">₹<span id="previewPrice"></span></strong></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="newAlertTargetPrice">Target Price (₹)</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" step="1" name="target_price" id="newAlertTargetPrice" class="form-control" placeholder="e.g. 20000" required />
+            </div>
+            <small class="text-muted" id="targetPriceHelp">Enter the price at which you want to receive an alert.</small>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Notify Via</label>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" name="email_on" id="newEmailNotify" checked />
+              <label class="form-check-label" for="newEmailNotify">Email Notification</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="sms_on" id="newSmsNotify" />
+              <label class="form-check-label" for="newSmsNotify">SMS Notification</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Start Tracking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateProductPreview(selectElem) {
+    const selectedOption = selectElem.options[selectElem.selectedIndex];
+    const previewBox = document.getElementById('productPreviewBox');
+    const previewName = document.getElementById('previewName');
+    const previewPrice = document.getElementById('previewPrice');
+    const previewImage = document.getElementById('previewImage');
+    const targetPriceInput = document.getElementById('newAlertTargetPrice');
+    const targetPriceHelp = document.getElementById('targetPriceHelp');
+
+    if (selectedOption && selectedOption.value) {
+      const price = parseFloat(selectedOption.getAttribute('data-price') || 0);
+      const name = selectedOption.getAttribute('data-name') || '';
+      const image = selectedOption.getAttribute('data-image') || '';
+
+      previewName.textContent = name;
+      previewPrice.textContent = Math.round(price).toLocaleString();
+      previewImage.src = image;
+      previewBox.classList.remove('d-none');
+
+      // Auto suggest 10% lower target price if input is empty
+      if (!targetPriceInput.value || targetPriceInput.value === '0') {
+        const suggestedTarget = Math.round(price * 0.9);
+        targetPriceInput.value = suggestedTarget;
+        targetPriceHelp.textContent = `Suggested target: ₹${suggestedTarget.toLocaleString()} (10% off current price ₹${Math.round(price).toLocaleString()})`;
+      }
+    } else {
+      previewBox.classList.add('d-none');
+    }
+  }
+</script>
 {% endblock %}

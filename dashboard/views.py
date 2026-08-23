@@ -1,6 +1,8 @@
 from datetime import date
+from decimal import Decimal
 from urllib.parse import urlsplit
 
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
@@ -8,6 +10,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import Resolver404, resolve
+from django.views.decorators.http import require_POST
 
 from .forms import PriceAlertForm, ProductForm, ProfileForm, SignupForm
 from .models import (
@@ -319,24 +322,164 @@ def product_detail(request, product_id):
         {"store": listing.platform.name, "price": listing.current_price, "shipping": "Free", "delivery": "2 days", "in_stock": listing.availability}
         for listing in listings
     ]
+    user_alert = PriceAlert.objects.filter(product=product).first()
     return render(request, "dashboard/product_detail.html", {
         "product": product,
         "savings": savings,
         "price_history": price_history,
         "store_compare": store_compare,
+        "user_alert": user_alert,
     })
 
 
 def price_alerts(request):
     ensure_sample_data()
-    alerts = PriceAlert.objects.select_related("product").all()
-    form = PriceAlertForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        alert = form.save(commit=False)
-        alert.current_price = alert.product.current_price
+    status_filter = request.GET.get("status", "all")
+    query = request.GET.get("q", "").strip()
+
+    alerts_qs = PriceAlert.objects.select_related("product", "product__platform", "product__category")
+
+    if query:
+        alerts_qs = alerts_qs.filter(product__name__icontains=query)
+
+    if status_filter == "watching":
+        alerts_qs = alerts_qs.filter(status=PriceAlert.STATUS_WATCHING)
+    elif status_filter == "triggered":
+        alerts_qs = alerts_qs.filter(status=PriceAlert.STATUS_TRIGGERED)
+
+    alerts = list(alerts_qs)
+    # Calculate helper properties for each alert
+    for alert in alerts:
+        alert.diff = alert.current_price - alert.target_price
+        alert.is_target_met = alert.current_price <= alert.target_price
+
+    total_count = PriceAlert.objects.count()
+    watching_count = PriceAlert.objects.filter(status=PriceAlert.STATUS_WATCHING).count()
+    triggered_count = PriceAlert.objects.filter(status=PriceAlert.STATUS_TRIGGERED).count()
+    all_products = Product.objects.order_by("name")
+
+    form = PriceAlertForm()
+    return render(request, "dashboard/price_alerts.html", {
+        "alerts": alerts,
+        "form": form,
+        "products": all_products,
+        "selected_status": status_filter,
+        "query": query,
+        "total_count": total_count,
+        "watching_count": watching_count,
+        "triggered_count": triggered_count,
+    })
+
+
+@require_POST
+def create_price_alert(request):
+    ensure_sample_data()
+    product_id = request.POST.get("product") or request.POST.get("product_id")
+    target_price_raw = request.POST.get("target_price")
+    email_on = request.POST.get("email_on") in ["on", "true", "True", "1", True]
+    sms_on = request.POST.get("sms_on") in ["on", "true", "True", "1", True]
+    next_url = request.POST.get("next") or "dashboard:price_alerts"
+
+    if not product_id or not target_price_raw:
+        messages.error(request, "Please select a product and provide a target price.")
+        return redirect(next_url)
+
+    try:
+        product = Product.objects.get(id=product_id)
+        target_price = Decimal(str(target_price_raw))
+    except (Product.DoesNotExist, ValueError, TypeError):
+        messages.error(request, "Invalid product or target price.")
+        return redirect(next_url)
+
+    current_price = product.current_price
+    status = PriceAlert.STATUS_TRIGGERED if current_price <= target_price else PriceAlert.STATUS_WATCHING
+
+    alert, created = PriceAlert.objects.get_or_create(
+        product=product,
+        defaults={
+            "target_price": target_price,
+            "current_price": current_price,
+            "status": status,
+            "email_on": email_on,
+            "sms_on": sms_on,
+        }
+    )
+
+    if not created:
+        alert.target_price = target_price
+        alert.current_price = current_price
+        alert.status = status
+        alert.email_on = email_on
+        alert.sms_on = sms_on
         alert.save()
-        return redirect("dashboard:price_alerts")
-    return render(request, "dashboard/price_alerts.html", {"alerts": alerts, "form": form})
+        messages.success(request, f"Updated price alert for {product.name} at ₹{target_price:,.0f}!")
+    else:
+        messages.success(request, f"Price alert set for {product.name} at target price ₹{target_price:,.0f}!")
+
+    if status == PriceAlert.STATUS_TRIGGERED:
+        Notification.objects.create(
+            type="alert",
+            title="Target Price Reached!",
+            body=f"{product.name} is currently ₹{current_price:,.0f}, meeting your target price of ₹{target_price:,.0f}!",
+            time="just now",
+            color="#10B981",
+            bg_color="#F0FDF4",
+        )
+
+    return redirect(next_url)
+
+
+@require_POST
+def edit_price_alert(request, alert_id):
+    alert = get_object_or_404(PriceAlert, id=alert_id)
+    target_price_raw = request.POST.get("target_price")
+    next_url = request.POST.get("next") or "dashboard:price_alerts"
+
+    if target_price_raw:
+        try:
+            alert.target_price = Decimal(str(target_price_raw))
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid target price.")
+            return redirect(next_url)
+
+    alert.email_on = request.POST.get("email_on") in ["on", "true", "True", "1", True]
+    alert.sms_on = request.POST.get("sms_on") in ["on", "true", "True", "1", True]
+
+    requested_status = request.POST.get("status")
+    if requested_status in [PriceAlert.STATUS_WATCHING, PriceAlert.STATUS_TRIGGERED]:
+        alert.status = requested_status
+    else:
+        if alert.product.current_price <= alert.target_price:
+            alert.status = PriceAlert.STATUS_TRIGGERED
+        else:
+            alert.status = PriceAlert.STATUS_WATCHING
+
+    alert.current_price = alert.product.current_price
+    alert.save()
+    messages.success(request, f"Price alert for {alert.product.name} updated successfully.")
+    return redirect(next_url)
+
+
+def delete_price_alert(request, alert_id):
+    alert = get_object_or_404(PriceAlert, id=alert_id)
+    product_name = alert.product.name
+    alert.delete()
+    messages.success(request, f"Alert for {product_name} has been deleted.")
+    next_url = request.POST.get("next") or request.GET.get("next") or "dashboard:price_alerts"
+    return redirect(next_url)
+
+
+@require_POST
+def toggle_alert_status(request, alert_id):
+    alert = get_object_or_404(PriceAlert, id=alert_id)
+    if alert.status == PriceAlert.STATUS_TRIGGERED:
+        alert.status = PriceAlert.STATUS_WATCHING
+        messages.info(request, f"Alert for {alert.product.name} reset to Watching.")
+    else:
+        alert.status = PriceAlert.STATUS_TRIGGERED
+        messages.info(request, f"Alert for {alert.product.name} set to Triggered.")
+    alert.save(update_fields=["status"])
+    return redirect("dashboard:price_alerts")
 
 
 def wishlist(request):
@@ -366,8 +509,9 @@ def settings_page(request):
     form = ProfileForm(request.POST or None, request.FILES or None, instance=profile, user=request.user)
     if request.method == "POST" and form.is_valid():
         form.save()
+        messages.success(request, "Your profile information has been updated successfully.")
         return redirect("dashboard:settings")
-    return render(request, "dashboard/settings.html", {"form": form})
+    return render(request, "dashboard/settings.html", {"form": form, "profile": profile})
 
 
 def add_product(request):

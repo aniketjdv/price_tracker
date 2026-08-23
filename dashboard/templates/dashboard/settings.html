@@ -2,61 +2,272 @@
 {% block title %}Settings - Price Tracker{% endblock %}
 {% block content %}
 <div class="container-fluid">
+  <!-- Page Header -->
   <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
     <div>
-      <h2 class="fw-bold">Settings</h2>
-      <p class="text-muted">Manage your account preferences.</p>
+      <h2 class="fw-bold mb-1"><i class="fas fa-gear text-primary me-2"></i>Account Settings</h2>
+      <p class="text-muted mb-0">Manage your profile details, photo, and preferences.</p>
     </div>
-    <button class="btn btn-outline-danger">Delete Account</button>
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard:dashboard_home' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+        <i class="fas fa-arrow-left"></i>
+        <span>Dashboard</span>
+      </a>
+    </div>
   </div>
 
   <div class="row g-4">
-    <div class="col-12 col-xl-6">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <h5 class="fw-semibold mb-3">Profile Information</h5>
-        <form method="post" enctype="multipart/form-data">
+    <!-- Left Column: User Overview & Profile Form -->
+    <div class="col-12 col-xl-8">
+      <!-- Profile Header Summary Card -->
+      <div class="card settings-card rounded-4 border-0 mb-4 overflow-hidden">
+        <div class="settings-header-banner"></div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div class="d-flex flex-column flex-sm-row align-items-center align-items-sm-end gap-3 mb-3">
+            <div class="settings-avatar-wrapper">
+              {% if form.instance.photo %}
+                <img id="avatarPreview" src="{{ form.instance.photo.url }}" class="settings-avatar" alt="{{ request.user.username }} photo">
+              {% else %}
+                <div id="avatarPlaceholder" class="settings-avatar-placeholder">
+                  {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+                </div>
+                <img id="avatarPreview" src="" class="settings-avatar d-none" alt="New photo preview">
+              {% endif %}
+            </div>
+            <div class="flex-grow-1 text-center text-sm-start">
+              <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-sm-start gap-2 mb-1">
+                <h4 class="fw-bold mb-0">
+                  {{ request.user.first_name }} {{ request.user.last_name|default:"" }}
+                  {% if not request.user.first_name and not request.user.last_name %}
+                    {{ request.user.username }}
+                  {% endif %}
+                </h4>
+                {% if request.user.is_staff %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle settings-badge-pill">Staff Admin</span>
+                {% else %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle settings-badge-pill">Active Member</span>
+                {% endif %}
+              </div>
+              <p class="text-muted small mb-0">
+                <span><i class="fas fa-at me-1"></i>{{ request.user.username }}</span>
+                <span class="mx-2">•</span>
+                <span><i class="far fa-calendar-alt me-1"></i>Joined {{ request.user.date_joined|date:"M Y" }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Edit Form Card -->
+      <div class="card settings-card rounded-4 border-0 p-4">
+        <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1"><i class="fas fa-user-pen text-primary me-2"></i>Personal Information</h5>
+            <p class="text-muted small mb-0">Update your name, contact details, and public avatar.</p>
+          </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
-          {% if form.errors %}<div class="alert alert-danger">Please correct the highlighted fields.</div>{% endif %}
-          <div class="mb-3">
-            <label class="form-label" for="id_first_name">First Name</label>
-            {{ form.first_name }}
+
+          {% if form.errors %}
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-circle-exclamation me-2 fs-5"></i>
+                <div>
+                  <strong>Please fix the errors below:</strong>
+                  <ul class="mb-0 mt-1 ps-3 small">
+                    {% for field in form %}
+                      {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                      {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+
+          <!-- Name Row -->
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="settings-form-label" for="id_first_name">
+                <i class="fas fa-user text-muted"></i>
+                <span>First Name</span>
+              </label>
+              <div class="input-group settings-input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                {{ form.first_name }}
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="settings-form-label" for="id_last_name">
+                <i class="fas fa-user text-muted"></i>
+                <span>Last Name</span>
+              </label>
+              <div class="input-group settings-input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                {{ form.last_name }}
+              </div>
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="id_last_name">Last Name</label>
-            {{ form.last_name }}
+
+          <!-- Contact Row -->
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+              <label class="settings-form-label" for="id_email">
+                <i class="fas fa-envelope text-muted"></i>
+                <span>Email Address <span class="text-danger">*</span></span>
+              </label>
+              <div class="input-group settings-input-group">
+                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                {{ form.email }}
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="settings-form-label" for="id_phone">
+                <i class="fas fa-phone text-muted"></i>
+                <span>Phone Number</span>
+              </label>
+              <div class="input-group settings-input-group">
+                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                {{ form.phone }}
+              </div>
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="id_email">Email</label>
-            {{ form.email }}
+
+          <!-- Photo Upload Section -->
+          <div class="mb-4">
+            <label class="settings-form-label" for="id_photo">
+              <i class="fas fa-image text-muted"></i>
+              <span>Profile Photo</span>
+            </label>
+            <div class="settings-photo-box">
+              <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="rounded-circle bg-primary-subtle text-primary p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                    <i class="fas fa-cloud-arrow-up fs-5"></i>
+                  </div>
+                  <div class="text-center text-sm-start">
+                    <p class="fw-semibold mb-0 small">Upload a new photo</p>
+                    <p class="text-muted small mb-0">PNG, JPG, or WebP (Max 5MB)</p>
+                  </div>
+                </div>
+                <div class="w-100 w-sm-auto">
+                  {{ form.photo }}
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="id_phone">Phone</label>
-            {{ form.phone }}
+
+          <!-- Form Buttons -->
+          <div class="d-flex align-items-center justify-content-end gap-2 pt-3 border-top">
+            <a href="{% url 'dashboard:settings' %}" class="btn btn-outline-secondary px-3">Discard</a>
+            <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-2">
+              <i class="fas fa-check"></i>
+              <span>Save Changes</span>
+            </button>
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="id_photo">Profile Photo</label>
-            {% if form.instance.photo %}
-              <img src="{{ form.instance.photo.url }}" class="settings-profile-photo mb-2" alt="Current profile photo">
-            {% endif %}
-            {{ form.photo }}
-          </div>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
         </form>
       </div>
     </div>
-    <div class="col-12 col-xl-6">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <h5 class="fw-semibold mb-3">Preferences</h5>
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" id="darkModeSwitch" role="switch">
-          <label class="form-check-label" for="darkModeSwitch">Dark Mode</label>
+
+    <!-- Right Column: Preferences & Security -->
+    <div class="col-12 col-xl-4">
+      <!-- Appearance Card -->
+      <div class="card settings-card rounded-4 border-0 p-4 mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div class="rounded-3 p-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+            <i class="fas fa-palette"></i>
+          </div>
+          <h5 class="fw-bold mb-0">Appearance</h5>
         </div>
-        <p class="text-muted small">Switch to dark theme for lower light mode eyestrain.</p>
+        <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
+          <div>
+            <p class="fw-semibold mb-0 small">Dark Mode</p>
+            <p class="text-muted small mb-0">Reduce eyestrain in low light</p>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="darkModeSwitch" role="switch" style="cursor: pointer;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Details & Security Card -->
+      <div class="card settings-card rounded-4 border-0 p-4 mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div class="rounded-3 p-2 bg-info-subtle text-info d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+            <i class="fas fa-shield-halved"></i>
+          </div>
+          <h5 class="fw-bold mb-0">Account & Security</h5>
+        </div>
+
+        <ul class="list-group list-group-flush small mb-3">
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted"><i class="fas fa-user-tag me-2"></i>Username</span>
+            <strong class="text-dark">{{ request.user.username }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted"><i class="fas fa-shield me-2"></i>Role</span>
+            <span class="badge {% if request.user.is_staff %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %}">
+              {% if request.user.is_staff %}Administrator{% else %}Standard User{% endif %}
+            </span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted"><i class="fas fa-circle-check me-2 text-success"></i>Status</span>
+            <span class="text-success fw-semibold">Active</span>
+          </li>
+        </ul>
+
+        <div class="p-3 bg-light rounded-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-lock text-muted"></i>
+            <span class="small text-muted">Need to change password? Contact admin or sign out and reset.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger Zone Card -->
+      <div class="card settings-card settings-danger-card rounded-4 border-0 p-4">
+        <div class="d-flex align-items-center gap-2 mb-2 text-danger">
+          <i class="fas fa-triangle-exclamation"></i>
+          <h6 class="fw-bold mb-0">Danger Zone</h6>
+        </div>
+        <p class="text-muted small mb-3">Permanently delete your account and all tracked items.</p>
+        <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+          <i class="fas fa-trash me-1"></i>Delete Account
+        </button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger" id="deleteAccountLabel">Delete Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-3">
+        <p class="mb-2">Are you sure you want to delete your account <strong>{{ request.user.username }}</strong>?</p>
+        <p class="text-muted small mb-0">This action is irreversible and will remove all your tracked products, wishlist items, and price alerts.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="alert('Please contact your system administrator to proceed with account removal.');" data-bs-dismiss="modal">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  // Dark mode toggle functionality
   const darkModeSwitch = document.getElementById('darkModeSwitch');
   const applyTheme = (enabled) => {
     document.body.classList.toggle('dark-mode', enabled);
@@ -66,6 +277,28 @@
   darkModeSwitch?.addEventListener('change', () => {
     localStorage.setItem('darkMode', String(darkModeSwitch.checked));
     applyTheme(darkModeSwitch.checked);
+  });
+
+  // Client-side image upload preview
+  const photoInput = document.getElementById('id_photo');
+  const avatarPreview = document.getElementById('avatarPreview');
+  const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+
+  photoInput?.addEventListener('change', function (e) {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        if (avatarPreview) {
+          avatarPreview.src = event.target.result;
+          avatarPreview.classList.remove('d-none');
+        }
+        if (avatarPlaceholder) {
+          avatarPlaceholder.classList.add('d-none');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   });
 </script>
 {% endblock %}

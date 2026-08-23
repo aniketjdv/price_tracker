@@ -76,15 +76,27 @@ class PriceAlertForm(forms.ModelForm):
 
 
 class ProfileForm(forms.ModelForm):
-    first_name = forms.CharField(max_length=150, required=False)
-    last_name = forms.CharField(max_length=150, required=False)
-    email = forms.EmailField(required=True)
+    first_name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter your first name"}),
+    )
+    last_name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter your last name"}),
+    )
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "you@example.com"}),
+    )
 
     class Meta:
         model = UserProfile
         fields = ["first_name", "last_name", "email", "phone", "photo"]
         widgets = {
-            "photo": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "phone": forms.TextInput(attrs={"class": "form-control", "placeholder": "+91 98765 43210"}),
+            "photo": forms.ClearableFileInput(attrs={"class": "form-control", "accept": "image/*"}),
         }
 
     def __init__(self, *args, user, **kwargs):

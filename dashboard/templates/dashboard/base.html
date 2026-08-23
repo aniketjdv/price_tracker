@@ -69,6 +69,19 @@
         </header>
 
         <main class="flex-fill overflow-auto p-4">
+          {% if messages %}
+            <div class="container-fluid mb-3">
+              {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show rounded-3 shadow-sm border-0" role="alert">
+                  <div class="d-flex align-items-center">
+                    <i class="fas {% if message.tags == 'success' %}fa-check-circle text-success{% elif message.tags == 'error' or message.tags == 'danger' %}fa-circle-exclamation text-danger{% elif message.tags == 'warning' %}fa-triangle-exclamation text-warning{% else %}fa-circle-info text-info{% endif %} me-2"></i>
+                    <div>{{ message }}</div>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
           {% block content %}{% endblock %}
         </main>
       </div>

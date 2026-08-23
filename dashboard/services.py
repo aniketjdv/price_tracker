@@ -108,6 +108,7 @@ def update_simulated_prices(seed=None):
     provider = get_provider("simulator")
     listings = ProductListing.objects.select_related("product", "platform")
     updated = 0
+    updated_products = set()
     for listing in listings:
         product_data = provider.get_product(listing.external_product_id)
         if not product_data:
@@ -122,5 +123,30 @@ def update_simulated_prices(seed=None):
         PriceHistory.objects.create(product_listing=listing, price=new_price, recorded_at=timezone.now())
         if change["dropped"] and listing.product.tracked:
             Notification.objects.create(type="drop", title="Price dropped", body=f"{listing.product.name} dropped by ₹{change['amount']:.0f} on {listing.platform.name}", time="just now")
+        
+        # Keep product current price in sync with primary or lowest listing
+        product = listing.product
+        if product.id not in updated_products:
+            lowest = product.listings.order_by("current_price").values_list("current_price", flat=True).first() or new_price
+            product.current_price = new_price
+            product.lowest_price = min(product.lowest_price or lowest, lowest)
+            product.save(update_fields=["current_price", "lowest_price", "updated_at"])
+            updated_products.add(product.id)
+
+            # Check and trigger any active price alerts
+            for alert in product.alerts.all():
+                alert.current_price = product.current_price
+                if alert.status == PriceAlert.STATUS_WATCHING and product.current_price <= alert.target_price:
+                    alert.status = PriceAlert.STATUS_TRIGGERED
+                    Notification.objects.create(
+                        type="alert",
+                        title="Target Price Reached!",
+                        body=f"{product.name} reached your target price of ₹{alert.target_price:,.0f} (Current: ₹{product.current_price:,.0f})!",
+                        time="just now",
+                        color="#10B981",
+                        bg_color="#F0FDF4",
+                    )
+                alert.save(update_fields=["current_price", "status"])
+
         updated += 1
     return updated
