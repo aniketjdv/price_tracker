@@ -5,7 +5,7 @@
   <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
     <div>
       <h2 class="fw-bold">Track New Product</h2>
-      <p class="text-muted">Paste a URL or enter product details to start tracking.</p>
+      <p class="text-muted">Paste a ShopSphere product URL to start tracking automatically.</p>
     </div>
     <a href="{% url 'dashboard:products' %}" class="btn btn-outline-secondary">Cancel</a>
   </div>
@@ -16,27 +16,9 @@
       <div class="row g-4">
         <div class="col-12">
           <label class="form-label">Product URL</label>
-          {{ form.url }}
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label">Product Name</label>
-          {{ form.name }}
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label">Platform</label>
-          {{ form.platform }}
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Current Price</label>
-          {{ form.current_price }}
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Original Price</label>
-          {{ form.original_price }}
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Target Price</label>
-          {{ form.lowest_price }}
+          <input type="url" name="url" value="{{ source_url }}" class="form-control" placeholder="https://127.0.0.1:8000/store/product/.../" required autofocus>
+          {% if store_product %}<div class="form-text text-success">ShopSphere product recognized: {{ store_product.name }}. Submit to track its shared price history.</div>{% endif %}
+          {% if url_error %}<div class="form-text text-danger">That URL was not recognized. Paste a product URL copied from the ShopSphere store.</div>{% endif %}
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-primary">Start Tracking</button>

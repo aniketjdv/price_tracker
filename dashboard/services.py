@@ -120,7 +120,7 @@ def update_simulated_prices(seed=None):
         listing.last_updated = timezone.now()
         listing.save(update_fields=["current_price", "discount_percentage", "last_updated"])
         PriceHistory.objects.create(product_listing=listing, price=new_price, recorded_at=timezone.now())
-        if change["dropped"]:
+        if change["dropped"] and listing.product.tracked:
             Notification.objects.create(type="drop", title="Price dropped", body=f"{listing.product.name} dropped by ₹{change['amount']:.0f} on {listing.platform.name}", time="just now")
         updated += 1
     return updated

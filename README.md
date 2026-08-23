@@ -39,6 +39,20 @@
 
    `python manage.py update_simulated_prices`
 
+   ## ShopSphere demo storefront
+
+   The independent `store` app provides an original simulated e-commerce storefront backed by the same `Product`, `ProductListing`, and `PriceHistory` records used by the tracker. It is available at `http://127.0.0.1:8000/store/` and exposes JSON endpoints under `/store/api/products/`.
+
+   Prepare or refresh the catalog with:
+
+   `python manage.py seed_store`
+
+   Add a product to the cart or wishlist from the storefront, open its product page to show the shared price history, then run:
+
+   `python manage.py simulate_price_changes`
+
+   Refresh the store and PricePulse dashboard to demonstrate the new shared history point and any generated price-drop notification. The store does not process real orders or payments.
+
    ## Provider configuration
 
    Copy `.env.example` to `.env` and set `ECOMMERCE_PROVIDER=simulator`. The Django settings read future Amazon and Flipkart credentials from environment variables only. To add a real integration, implement the four methods in `AmazonProvider` or `FlipkartProvider`; the models, services, templates, and views consume the shared provider interface.

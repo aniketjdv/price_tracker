@@ -1,4 +1,5 @@
 from datetime import date
+from urllib.parse import urlsplit
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -6,6 +7,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import Resolver404, resolve
 
 from .forms import PriceAlertForm, ProductForm, ProfileForm, SignupForm
 from .models import (
@@ -278,7 +280,10 @@ def products(request):
     query = request.GET.get("q", "")
     platform_filter = request.GET.get("platform", "All")
     sort = request.GET.get("sort", "Lowest Price")
+    tracked_only = request.GET.get("tracked") == "1"
     products = Product.objects.all()
+    if tracked_only:
+        products = products.filter(tracked=True)
     if query:
         products = products.filter(name__icontains=query)
     if platform_filter != "All":
@@ -299,6 +304,8 @@ def products(request):
         "selected_platform": platform_filter,
         "sort": sort,
         "query": query,
+        "tracked_only": tracked_only,
+        "tracked_count": Product.objects.filter(tracked=True).count(),
     })
 
 
@@ -374,11 +381,25 @@ def add_product(request):
 
 def track_new(request):
     ensure_sample_data()
+    source_url = request.POST.get("url", "") if request.method == "POST" else request.GET.get("url", "")
+    store_product = None
+    if source_url:
+        try:
+            path = urlsplit(source_url).path or source_url.split("?", 1)[0]
+            match = resolve(path)
+            if match.url_name == "product_detail" and match.namespace == "store":
+                store_product = Product.objects.get(slug=match.kwargs["slug"])
+        except (Product.DoesNotExist, Resolver404, KeyError, ValueError):
+            store_product = None
+
     if request.method == "POST":
-        form = ProductForm(request.POST)
-        if form.is_valid():
-            product = form.save()
-            return redirect("dashboard:product_detail", product_id=product.id)
-    else:
-        form = ProductForm()
-    return render(request, "dashboard/track_new.html", {"form": form})
+        if store_product:
+            store_product.tracked = True
+            store_product.url = source_url
+            store_product.save(update_fields=["tracked", "url", "updated_at"])
+            return redirect("dashboard:product_detail", product_id=store_product.id)
+    return render(request, "dashboard/track_new.html", {
+        "source_url": source_url,
+        "store_product": store_product,
+        "url_error": bool(request.method == "POST" and not store_product),
+    })

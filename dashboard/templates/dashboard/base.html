@@ -51,7 +51,7 @@
               <i class="fas fa-bell"></i>
               <span class="notification-badge">{{ notifications_count|default:0 }}</span>
             </a>
-            <a href="{% url 'dashboard:add_product' %}" class="topbar-add"><i class="fas fa-plus"></i><span>Add</span></a>
+            {% if request.user.is_staff %}<a href="{% url 'dashboard:add_product' %}" class="topbar-add"><i class="fas fa-plus"></i><span>Add</span></a>{% endif %}
             <a href="{% url 'dashboard:track_new' %}" class="topbar-track"><i class="fas fa-expand"></i><span>Track</span></a>
             {% if request.user.is_authenticated %}
               <span class="text-muted small d-none d-lg-inline">{{ request.user.get_username }}</span>

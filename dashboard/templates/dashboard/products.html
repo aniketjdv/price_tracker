@@ -5,9 +5,12 @@
   <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4 gap-3">
     <div>
       <h2 class="fw-bold">Products</h2>
-      <p class="text-muted">Browse all tracked products and manage your watchlist.</p>
+      <p class="text-muted">{% if tracked_only %}Products currently being monitored for price changes.{% else %}Browse products and manage your tracked list.{% endif %}</p>
     </div>
-    <a href="{% url 'dashboard:add_product' %}" class="btn btn-primary">Add Product</a>
+    <div class="d-flex gap-2">
+      {% if tracked_only %}<a href="{% url 'dashboard:products' %}" class="btn btn-outline-secondary">All Products</a>{% else %}<a href="{% url 'dashboard:products' %}?tracked=1" class="btn btn-outline-primary">Tracked ({{ tracked_count }})</a>{% endif %}
+      {% if request.user.is_staff %}<a href="{% url 'dashboard:add_product' %}" class="btn btn-primary">Add Product</a>{% endif %}
+    </div>
   </div>
 
   <div class="card rounded-4 shadow-sm border-0 mb-4">
@@ -43,7 +46,7 @@
     {% for product in products %}
     <div class="col-12 col-md-6 col-xl-4">
       <div class="card rounded-4 shadow-sm border-0 h-100">
-        <img src="{{ product.image_url }}" class="card-img-top rounded-top-4" alt="{{ product.name }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format';" />
+        <img src="{{ product.image_url }}" class="card-img-top product-card-image rounded-top-4" alt="{{ product.name }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format';" />
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">{{ product.name }}</h5>
           <p class="text-muted small mb-2">{{ product.platform.name }}</p>
@@ -55,7 +58,7 @@
           <p class="text-muted mb-3 text-decoration-line-through">₹{{ product.original_price|floatformat:0 }}</p>
           <div class="mt-auto d-flex gap-2 flex-wrap">
             <a href="{% url 'dashboard:product_detail' product.id %}" class="btn btn-outline-primary btn-sm">Details</a>
-            <a href="#" class="btn btn-primary btn-sm">Track</a>
+            {% if product.tracked %}<span class="badge text-bg-primary align-self-center">Tracking</span>{% else %}<a href="{% url 'dashboard:track_new' %}?url={{ product.url|urlencode }}" class="btn btn-primary btn-sm">Track</a>{% endif %}
           </div>
         </div>
       </div>

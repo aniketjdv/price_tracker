@@ -130,7 +130,9 @@
 .auth-legal { margin-top: 1rem; color: #98a2b3; font-size: .66rem; }
 .eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
 .admin-product-thumb { width: 38px; height: 38px; object-fit: cover; border-radius: .5rem; }
+.product-card-image { height: 190px; object-fit: contain; padding: .75rem; background: #f8f9fb; }
 @media (max-width: 700px) {
   .auth-page { padding: 1rem; }
   .auth-card { padding: 1.4rem; }
+  .product-card-image { height: 150px; }
 }

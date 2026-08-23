@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-&9@p$z6dxtxq*hvhc!c1gyr6+9+zx5h^@!oy8b1)+(vwhb9em(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1','localhost','192.168.0.111']
 
 
 # Application definition
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'dashboard',
+    'store',
 ]
 
 MIDDLEWARE = [
@@ -133,6 +134,7 @@ LOGIN_REDIRECT_URL = "dashboard:dashboard_home"
 LOGOUT_REDIRECT_URL = "dashboard:login"
 
 ECOMMERCE_PROVIDER = os.getenv("ECOMMERCE_PROVIDER", "simulator")
+STORE_API_BASE_URL = os.getenv("STORE_API_BASE_URL", "http://127.0.0.1:8000/store/api/")
 AMAZON_API_KEY = os.getenv("AMAZON_API_KEY", "")
 AMAZON_API_SECRET = os.getenv("AMAZON_API_SECRET", "")
 AMAZON_PARTNER_TAG = os.getenv("AMAZON_PARTNER_TAG", "")
