@@ -1,0 +1,27 @@
+# ==========================================================
+# PricePulse: AI-Powered Price Tracker - Python Dependencies
+# ==========================================================
+
+# Core Django Framework & ORM
+Django>=5.0,<6.0
+asgiref>=3.8.0
+sqlparse>=0.5.0
+tzdata>=2024.1
+
+# AI, Machine Learning & Scientific Computing
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.12.0
+scikit-learn>=1.4.0
+joblib>=1.3.0
+threadpoolctl>=3.4.0
+
+# Imaging & Utilities
+Pillow>=10.2.0
+python-dateutil>=2.8.2
+six>=1.16.0
+typing_extensions>=4.10.0
+
+# Document & Report Generation
+python-docx>=1.1.0
+lxml>=5.1.0\n
