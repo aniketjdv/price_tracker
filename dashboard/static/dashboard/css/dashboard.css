@@ -62,6 +62,9 @@
 .dark-mode .form-control::placeholder { color: #9ca3af; }
 .dark-mode .sidebar .list-group-item { color: #d1d5db; background: transparent; }
 .dark-mode .sidebar .list-group-item.active { color: #a5b4fc; background: #312e81; }
+.dark-mode .platform-donut:after { background: #1f2937 !important; }
+.dark-mode .hover-bg-light:hover { background: rgba(255, 255, 255, 0.06) !important; }
+.hover-bg-light:hover { background: #f8fafc; }
 .dashboard-hero { background: linear-gradient(110deg, #4b36f5, #783bf5); border-radius: 12px; padding: 1.6rem 1.7rem; }
 .dashboard-hero h1 { max-width: 250px; font-size: 1.5rem; line-height: 1.12; }
 .dashboard-hero p { max-width: 470px; font-size: .72rem; }

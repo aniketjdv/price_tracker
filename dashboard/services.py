@@ -122,8 +122,23 @@ def update_simulated_prices(seed=None):
         listing.save(update_fields=["current_price", "discount_percentage", "last_updated"])
         PriceHistory.objects.create(product_listing=listing, price=new_price, recorded_at=timezone.now())
         if change["dropped"] and listing.product.tracked:
-            Notification.objects.create(type="drop", title="Price dropped", body=f"{listing.product.name} dropped by ₹{change['amount']:.0f} on {listing.platform.name}", time="just now")
-        
+            if listing.product.tracked_by.exists():
+                for u in listing.product.tracked_by.all():
+                    Notification.objects.create(
+                        user=u,
+                        type="drop",
+                        title="Price dropped",
+                        body=f"{listing.product.name} dropped by ₹{change['amount']:.0f} on {listing.platform.name}",
+                        time="just now",
+                    )
+            else:
+                Notification.objects.create(
+                    type="drop",
+                    title="Price dropped",
+                    body=f"{listing.product.name} dropped by ₹{change['amount']:.0f} on {listing.platform.name}",
+                    time="just now",
+                )
+
         # Keep product current price in sync with primary or lowest listing
         product = listing.product
         if product.id not in updated_products:
@@ -133,15 +148,40 @@ def update_simulated_prices(seed=None):
             product.save(update_fields=["current_price", "lowest_price", "updated_at"])
             updated_products.add(product.id)
 
+            # Recalculate AI Prediction & Recommendation for this product
+            from ai_engine import AIModelManager
+            ai_res = AIModelManager.analyze_product(product)
+            ai_snippet = f" | AI: {ai_res['recommendation']} ({ai_res['recommendation_strength']})" if ai_res and ai_res.get('available') else ""
+
+            if change["dropped"] and listing.product.tracked:
+                drop_body = f"{product.name} dropped by ₹{change['amount']:.0f} on {listing.platform.name}.{ai_snippet}"
+                if product.tracked_by.exists():
+                    for u in product.tracked_by.all():
+                        Notification.objects.create(
+                            user=u,
+                            type="drop",
+                            title="Price Dropped!",
+                            body=drop_body,
+                            time="just now",
+                        )
+                else:
+                    Notification.objects.create(
+                        type="drop",
+                        title="Price Dropped!",
+                        body=drop_body,
+                        time="just now",
+                    )
+
             # Check and trigger any active price alerts
             for alert in product.alerts.all():
                 alert.current_price = product.current_price
                 if alert.status == PriceAlert.STATUS_WATCHING and product.current_price <= alert.target_price:
                     alert.status = PriceAlert.STATUS_TRIGGERED
                     Notification.objects.create(
+                        user=alert.user,
                         type="alert",
                         title="Target Price Reached!",
-                        body=f"{product.name} reached your target price of ₹{alert.target_price:,.0f} (Current: ₹{product.current_price:,.0f})!",
+                        body=f"{product.name} reached your target price of ₹{alert.target_price:,.0f} (Current: ₹{product.current_price:,.0f})!{ai_snippet}",
                         time="just now",
                         color="#10B981",
                         bg_color="#F0FDF4",

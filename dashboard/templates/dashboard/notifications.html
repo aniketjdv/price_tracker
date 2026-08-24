@@ -1,37 +1,52 @@
 {% extends 'dashboard/base.html' %}
 {% block title %}Notifications - Price Tracker{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
   <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
     <div>
-      <h2 class="fw-bold">Notifications</h2>
-      <p class="text-muted">Recent updates and alerts from your tracked items.</p>
+      <h2 class="fw-bold mb-1">Notifications</h2>
+      <p class="text-muted mb-0">Recent updates, price drop alerts, and coupons for your tracked items.</p>
     </div>
-    <form method="post">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-outline-primary">Mark all read</button>
-    </form>
+    {% if notifs %}
+      <form method="post" action="{% url 'dashboard:notifications' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-primary btn-sm">
+          <i class="fas fa-check-double me-1"></i>Mark all as read
+        </button>
+      </form>
+    {% endif %}
   </div>
 
   <div class="list-group">
     {% for notif in notifs %}
-    <div class="list-group-item rounded-4 mb-3 border-0 shadow-sm {% if not notif.read %}bg-light{% endif %}">
-      <div class="d-flex align-items-start gap-3">
-        <div class="bg-white rounded-circle d-flex align-items-center justify-content-center" style="width:44px; height:44px; border:1px solid #e9ecef;">
-          <i class="fas {{ notif.icon_class }} text-primary"></i>
-        </div>
-        <div class="flex-fill">
-          <div class="d-flex align-items-center gap-2 mb-1">
-            <h6 class="mb-0">{{ notif.title }}</h6>
-            {% if not notif.read %}<span class="badge bg-primary">New</span>{% endif %}
+      <div class="list-group-item rounded-4 mb-3 border-0 shadow-sm p-3 bg-white {% if not notif.read %}border-start border-primary border-4{% else %}opacity-75{% endif %}">
+        <div class="d-flex align-items-start gap-3">
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px; height:44px; background:{{ notif.bg_color|default:'#EEF2FF' }}; color:{{ notif.color|default:'#4F46E5' }};">
+            <i class="fas {{ notif.icon_class }} fs-5"></i>
           </div>
-          <p class="mb-1">{{ notif.body }}</p>
-          <small class="text-muted">{{ notif.time }}</small>
+          <div class="flex-fill">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-1 flex-wrap">
+              <div class="d-flex align-items-center gap-2">
+                <h6 class="mb-0 fw-bold text-dark">{{ notif.title }}</h6>
+                {% if not notif.read %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">New</span>
+                {% endif %}
+              </div>
+              <small class="text-muted"><i class="far fa-clock me-1"></i>{{ notif.time|default:notif.created_at|date:"d M H:i" }}</small>
+            </div>
+            <p class="mb-0 text-muted small">{{ notif.body }}</p>
+          </div>
         </div>
       </div>
-    </div>
     {% empty %}
-    <div class="alert alert-info">No notifications available.</div>
+      <div class="card rounded-4 border-0 shadow-sm p-5 text-center bg-white">
+        <div class="mb-3 text-muted">
+          <i class="far fa-bell-slash fs-1"></i>
+        </div>
+        <h5 class="fw-bold mb-1">No notifications yet</h5>
+        <p class="text-muted small mb-0">When your price targets are reached or prices drop on tracked items, notifications will appear here.</p>
+      </div>
     {% endfor %}
   </div>
 </div>

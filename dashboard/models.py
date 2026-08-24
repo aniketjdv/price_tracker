@@ -77,6 +77,7 @@ class Product(models.Model):
     prediction = models.TextField(blank=True)
     wishlisted = models.BooleanField(default=False)
     tracked = models.BooleanField(default=False)
+    tracked_by = models.ManyToManyField(User, blank=True, related_name="tracked_products")
     updated = models.CharField(max_length=50, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -176,6 +177,7 @@ class PriceAlert(models.Model):
         (STATUS_TRIGGERED, "Triggered"),
     ]
 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="price_alerts")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="alerts")
     target_price = models.DecimalField(max_digits=10, decimal_places=2)
     current_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -200,6 +202,7 @@ class Notification(models.Model):
         ("offer", "Offer"),
     ]
 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="drop")
     title = models.CharField(max_length=120)
     body = models.TextField()
@@ -229,3 +232,53 @@ class Notification(models.Model):
         if self.type == "offer":
             return "fa-bolt"
         return "fa-info-circle"
+
+
+class AIPricePrediction(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="ai_predictions")
+    prediction_date = models.DateField(auto_now=True)
+    current_price = models.DecimalField(max_digits=10, decimal_places=2)
+    predicted_price_7_days = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    predicted_price_14_days = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    predicted_price_30_days = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    trend = models.CharField(max_length=20, default="STABLE")
+    recommendation = models.CharField(max_length=20, default="WAIT")
+    recommendation_strength = models.CharField(max_length=30, default="Wait")
+    recommendation_reason = models.TextField(blank=True)
+    is_anomaly = models.BooleanField(default=False)
+    anomaly_reason = models.TextField(blank=True)
+    historical_average = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    historical_minimum = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    historical_maximum = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    model_name = models.CharField(max_length=100, default="RandomForestRegressor")
+    model_version = models.CharField(max_length=50, default="v1.0")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "AI Price Prediction"
+        verbose_name_plural = "AI Price Predictions"
+
+    def __str__(self):
+        return f"AI Prediction: {self.product.name} ({self.recommendation})"
+
+
+class AIModelMetric(models.Model):
+    model_name = models.CharField(max_length=100)
+    model_type = models.CharField(max_length=50)
+    mae = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    rmse = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    r2_score = models.DecimalField(max_digits=6, decimal_places=4, null=True, blank=True)
+    trained_samples = models.PositiveIntegerField(default=0)
+    trained_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-trained_at"]
+        verbose_name = "AI Model Metric"
+        verbose_name_plural = "AI Model Metrics"
+
+    def __str__(self):
+        return f"{self.model_name} (MAE: {self.mae}, R²: {self.r2_score})"
+

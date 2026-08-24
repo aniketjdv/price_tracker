@@ -1,51 +1,245 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}{{ product.name }} - Price Tracker{% endblock %}
+{% load humanize %}
+{% block title %}{{ product.name }} - PricePulse AI Tracker{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
+  <!-- Top Navigation Bar -->
   <div class="d-flex align-items-start gap-3 mb-4 flex-column flex-md-row">
-    <a href="{% url 'dashboard:products' %}" class="btn btn-outline-secondary">← Back</a>
+    <a href="{% url 'dashboard:products' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i>Back
+    </a>
     <div>
-      <p class="text-muted small mb-1">{{ product.category.name }} · {{ product.platform.name }}</p>
-      <h2 class="fw-bold">{{ product.name }}</h2>
+      <p class="text-muted small mb-1">
+        <span class="badge bg-light text-dark border me-1">{{ product.category.name }}</span>
+        <span class="badge text-dark border" style="background-color: {{ product.platform.bg_color|default:'#F3F4F6' }}; color: {{ product.platform.color|default:'#4B5563' }};">
+          {{ product.platform.name }}
+        </span>
+      </p>
+      <h3 class="fw-bold mb-0">{{ product.name }}</h3>
     </div>
-    <div class="ms-auto">
-      <button class="btn btn-outline-danger">Wishlist</button>
-      <button class="btn btn-outline-secondary">Share</button>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-outline-danger btn-sm"><i class="far fa-heart me-1"></i>Wishlist</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(window.location.href); alert('Product link copied to clipboard!');">
+        <i class="fas fa-share-nodes me-1"></i>Share
+      </button>
     </div>
   </div>
 
   <div class="row g-4">
+    <!-- Left Column: Product Visuals & Interactive Forecast Chart -->
     <div class="col-12 col-lg-6">
-      <img src="{{ product.image_url }}" class="img-fluid rounded-4 shadow-sm" alt="{{ product.name }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format';" />
-      <div class="mt-3 d-flex gap-2 flex-wrap">
-        {% for image in product.images.all %}
-        <img src="{{ image.image_url }}" class="img-thumbnail rounded-4" style="width:72px; height:72px; object-fit:cover;" alt="Image" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format';" />
-        {% empty %}
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="col-12 col-lg-6">
-      <div class="card rounded-4 shadow-sm border-0 mb-4">
-        <div class="card-body">
-          <span class="badge text-bg-danger mb-3">{{ product.discount }}% OFF</span>
-          <h3 class="fw-bold">₹{{ product.current_price|floatformat:0 }}</h3>
-          <p class="text-muted text-decoration-line-through">₹{{ product.original_price|floatformat:0 }}</p>
-          <p class="text-success mb-3">Save ₹{{ savings|floatformat:0 }}</p>
-          <div class="mb-3">
-            <span class="badge text-bg-success">{{ product.stock }}</span>
-            <span class="badge text-bg-light text-dark">{{ product.rating }} ★</span>
-          </div>
-          <a href="{{ product.url }}" class="btn btn-primary w-100 mb-2" target="_blank" rel="noopener">Buy Now</a>
-          <a href="#priceAlertCard" class="btn btn-outline-primary w-100">{% if user_alert %}Manage Alert{% else %}Set Price Alert{% endif %}</a>
+      <div class="card rounded-4 shadow-sm border-0 p-3 mb-4">
+        <div class="text-center">
+          <img src="{{ product.image_url }}" class="img-fluid rounded-4" style="max-height: 380px; object-fit: contain;" alt="{{ product.name }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format';" />
+        </div>
+        <div class="mt-3 d-flex gap-2 flex-wrap justify-content-center">
+          {% for image in product.images.all %}
+          <img src="{{ image.image_url }}" class="img-thumbnail rounded-3" style="width:64px; height:64px; object-fit:cover;" alt="Thumbnail" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&auto=format';" />
+          {% empty %}
+          {% endfor %}
         </div>
       </div>
 
+      <!-- Price History + AI Prediction Interactive Chart -->
+      <div class="card rounded-4 shadow-sm border-0 p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold mb-0">
+              <i class="fas fa-chart-line text-primary me-2"></i>Price History & AI Forecast
+            </h5>
+            <small class="text-muted">Actual historical data + Multi-horizon Machine Learning projection</small>
+          </div>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+            <i class="fas fa-robot me-1"></i>ML Powered
+          </span>
+        </div>
+
+        <div style="height: 280px; position: relative;">
+          <canvas id="priceForecastChart"></canvas>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-center gap-4 mt-3 pt-3 border-top flex-wrap small text-muted">
+          <div class="d-flex align-items-center">
+            <span class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: #3b82f6;"></span>
+            <span>Actual Price History</span>
+          </div>
+          <div class="d-flex align-items-center">
+            <span class="d-inline-block rounded me-2" style="width: 20px; height: 3px; background-color: #8b5cf6; border-top: 2px dashed #8b5cf6;"></span>
+            <span>AI Future Prediction (7d, 14d, 30d)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: AI Intelligence, Pricing Box, & Alert Controls -->
+    <div class="col-12 col-lg-6">
+      
+      <!-- 1. AI Price Intelligence & Recommendation Card -->
+      <div class="card rounded-4 shadow-sm border-0 mb-4 overflow-hidden" style="border-top: 4px solid {% if ai_analysis.recommendation == 'BUY NOW' %}#10B981{% else %}#F59E0B{% endif %} !important;">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background-color: {% if ai_analysis.recommendation == 'BUY NOW' %}#ECFDF5; color: #059669;{% else %}#FFFBEB; color: #D97706;{% endif %}">
+                <i class="fas {% if ai_analysis.recommendation == 'BUY NOW' %}fa-cart-shopping{% else %}fa-clock{% endif %}"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold mb-0">AI Buy / Wait Recommendation</h6>
+                <small class="text-muted">Trained on historical marketplace pricing models</small>
+              </div>
+            </div>
+            
+            <div class="text-end">
+              <span class="badge fs-6 px-3 py-2 text-uppercase {% if ai_analysis.recommendation == 'BUY NOW' %}bg-success text-white{% else %}bg-warning text-dark{% endif %}">
+                {% if ai_analysis.recommendation == 'BUY NOW' %}<i class="fas fa-check-circle me-1"></i>{% else %}<i class="fas fa-hourglass-half me-1"></i>{% endif %}
+                {{ ai_analysis.recommendation }}
+              </span>
+              <div>
+                <span class="badge bg-light text-secondary border mt-1">{{ ai_analysis.recommendation_strength }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic AI Reasoning Box -->
+          <div class="p-3 rounded-3 mb-3" style="background-color: #F8FAFC; border-left: 4px solid {% if ai_analysis.recommendation == 'BUY NOW' %}#10B981{% else %}#F59E0B{% endif %};">
+            <p class="mb-0 small text-secondary">
+              <strong><i class="fas fa-brain text-primary me-1"></i>AI Analysis:</strong> {{ ai_analysis.recommendation_reason }}
+            </p>
+          </div>
+
+          <!-- Anomaly Alert Pill (if detected) -->
+          {% if ai_analysis.is_anomaly %}
+            <div class="alert alert-warning border-0 rounded-3 mb-3 d-flex align-items-start gap-2 py-2 px-3">
+              <i class="fas fa-triangle-exclamation text-warning mt-1 fs-5"></i>
+              <div>
+                <strong class="small text-dark">Unusual Price Detected!</strong>
+                <p class="mb-0 small text-muted">{{ ai_analysis.anomaly_reason }}</p>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Key Historical & AI Benchmark Grid -->
+          <div class="row g-2 mb-3 text-center">
+            <div class="col-6 col-sm-3">
+              <div class="bg-light rounded-3 p-2 border">
+                <span class="text-muted small d-block">Current</span>
+                <strong class="text-dark">₹{{ ai_analysis.current_price|floatformat:0 }}</strong>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3">
+              <div class="bg-light rounded-3 p-2 border">
+                <span class="text-muted small d-block">Historical Min</span>
+                <strong class="text-success">₹{{ ai_analysis.historical_minimum|floatformat:0 }}</strong>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3">
+              <div class="bg-light rounded-3 p-2 border">
+                <span class="text-muted small d-block">30d Average</span>
+                <strong class="text-secondary">₹{{ ai_analysis.historical_average|floatformat:0 }}</strong>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3">
+              <div class="bg-light rounded-3 p-2 border">
+                <span class="text-muted small d-block">Price Trend</span>
+                {% if ai_analysis.trend == 'INCREASING' %}
+                  <span class="badge text-bg-danger"><i class="fas fa-arrow-up me-1"></i>Rising</span>
+                {% elif ai_analysis.trend == 'DECREASING' %}
+                  <span class="badge text-bg-success"><i class="fas fa-arrow-down me-1"></i>Falling</span>
+                {% elif ai_analysis.trend == 'VOLATILE' %}
+                  <span class="badge text-bg-warning"><i class="fas fa-bolt me-1"></i>Volatile</span>
+                {% else %}
+                  <span class="badge text-bg-secondary"><i class="fas fa-arrows-left-right me-1"></i>Stable</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-Horizon Forecast Projection -->
+          <div class="bg-light rounded-3 p-3 border">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="small fw-bold mb-0 text-uppercase text-muted">
+                <i class="fas fa-crystal-ball text-primary me-1"></i>AI Forecast Projections
+              </h6>
+              <span class="text-muted" style="font-size: 0.75rem;">Model: {{ ai_analysis.model_name|default:"RandomForest" }}</span>
+            </div>
+            
+            <div class="row g-2 text-center">
+              <div class="col-4">
+                <div class="bg-white rounded-2 p-2 shadow-sm border">
+                  <span class="text-muted" style="font-size: 0.75rem;">In 7 Days</span>
+                  <p class="fw-bold text-dark mb-0">₹{{ ai_analysis.predicted_price_7_days|floatformat:0|default:"--" }}</p>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="bg-white rounded-2 p-2 shadow-sm border">
+                  <span class="text-muted" style="font-size: 0.75rem;">In 14 Days</span>
+                  <p class="fw-bold text-primary mb-0">₹{{ ai_analysis.predicted_price_14_days|floatformat:0|default:"--" }}</p>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="bg-white rounded-2 p-2 shadow-sm border">
+                  <span class="text-muted" style="font-size: 0.75rem;">In 30 Days</span>
+                  <p class="fw-bold text-dark mb-0">₹{{ ai_analysis.predicted_price_30_days|floatformat:0|default:"--" }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Purchase & Pricing Box -->
+      <div class="card rounded-4 shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div>
+              <span class="badge text-bg-danger mb-2">{{ product.discount }}% OFF</span>
+              <div class="d-flex align-items-baseline gap-2">
+                <h2 class="fw-bold text-dark mb-0">₹{{ product.current_price|floatformat:0 }}</h2>
+                {% if product.original_price %}
+                  <span class="text-muted text-decoration-line-through">₹{{ product.original_price|floatformat:0 }}</span>
+                {% endif %}
+              </div>
+              {% if savings > 0 %}
+                <p class="text-success small fw-semibold mb-0">Save ₹{{ savings|floatformat:0 }}</p>
+              {% endif %}
+            </div>
+            
+            <div class="text-end">
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">{{ product.stock }}</span>
+              <div class="mt-1">
+                <span class="badge bg-light text-dark border">{{ product.rating }} ★ ({{ product.reviews }} reviews)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 mt-3">
+            <a href="{{ product.url|default:'#' }}" class="btn btn-primary btn-lg fw-semibold" target="_blank" rel="noopener">
+              <i class="fas fa-bolt me-1"></i>Buy Now on {{ product.platform.name }}
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Price Alert Tracker Card -->
       <div class="card rounded-4 shadow-sm border-0" id="priceAlertCard">
-        <div class="card-body">
-          {% if user_alert %}
+        <div class="card-body p-4">
+          {% if not user.is_authenticated %}
+            <div class="text-center py-3">
+              <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-3" style="width: 54px; height: 54px;">
+                <i class="fas fa-bell fs-4"></i>
+              </div>
+              <h5 class="fw-bold mb-1">Track & Set Price Alert</h5>
+              <p class="text-muted small mb-3">Sign in to your account to monitor this product, receive automatic price-drop alerts, and track your personalized history.</p>
+              <a href="{% url 'dashboard:login' %}?next={{ request.path|urlencode }}" class="btn btn-primary w-100 py-2 fw-semibold">
+                <i class="fas fa-right-to-bracket me-2"></i>Sign In to Track Product
+              </a>
+              <div class="mt-2">
+                <small class="text-muted">Don't have an account? <a href="{% url 'dashboard:signup' %}" class="fw-semibold text-primary">Create one here</a></small>
+              </div>
+            </div>
+          {% elif user_alert %}
             <div class="d-flex align-items-center justify-content-between mb-3">
-              <h5 class="card-title fw-bold mb-0">Active Price Alert</h5>
+              <h5 class="card-title fw-bold mb-0"><i class="fas fa-bell text-primary me-2"></i>Active Price Alert</h5>
               {% if user_alert.status == 'triggered' %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fas fa-check-circle me-1"></i>Triggered</span>
               {% else %}
@@ -56,7 +250,7 @@
             <div class="bg-light rounded-3 p-3 mb-3 text-center">
               <div class="row g-2">
                 <div class="col-6 border-end">
-                  <span class="text-muted small">Target Price</span>
+                  <span class="text-muted small">Your Target Price</span>
                   <p class="fs-5 fw-bold text-primary mb-0">₹{{ user_alert.target_price|floatformat:0 }}</p>
                 </div>
                 <div class="col-6">
@@ -95,7 +289,7 @@
               </div>
             </form>
           {% else %}
-            <h5 class="card-title fw-bold mb-3">Set Price Alert</h5>
+            <h5 class="card-title fw-bold mb-3"><i class="fas fa-bell text-primary me-2"></i>Set Price Alert</h5>
             <form method="post" action="{% url 'dashboard:create_price_alert' %}">
               {% csrf_token %}
               <input type="hidden" name="product_id" value="{{ product.id }}" />
@@ -106,7 +300,7 @@
                   <span class="input-group-text">₹</span>
                   <input type="number" step="1" name="target_price" class="form-control" value="{{ product.lowest_price|default:product.current_price|floatformat:0 }}" required />
                 </div>
-                <small class="text-muted">Current: ₹{{ product.current_price|floatformat:0 }}</small>
+                <small class="text-muted">Suggested (AI forecast / lowest): ₹{{ ai_analysis.predicted_price_14_days|default:product.current_price|floatformat:0 }}</small>
               </div>
               <div class="mb-3">
                 <label class="form-label small fw-semibold">Notify via</label>
@@ -119,8 +313,8 @@
                   <label class="form-check-label small" for="smsNotify">SMS Notification</label>
                 </div>
               </div>
-              <button type="submit" class="btn btn-success w-100">
-                <i class="fas fa-bell me-1"></i>Start Tracking
+              <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                <i class="fas fa-bell me-1"></i>Start Tracking Product
               </button>
             </form>
           {% endif %}
@@ -129,26 +323,46 @@
     </div>
   </div>
 
-  <div class="row g-4 mt-4">
+  <!-- Bottom Tabs: Overview, Specs, Reviews, & Store Comparisons -->
+  <div class="row g-4 mt-2">
     <div class="col-12 col-lg-8">
       <div class="card rounded-4 shadow-sm border-0 p-4">
         <ul class="nav nav-tabs mb-3" role="tablist">
-          <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button></li>
-          <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#specs" type="button" role="tab">Specs</button></li>
-          <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">Reviews</button></li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview & AI Insights</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#specs" type="button" role="tab">Specifications</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">Reviews ({{ product.reviews }})</button>
+          </li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane fade show active" id="overview" role="tabpanel">
-            <p>{{ product.description }}</p>
-            <div class="bg-light rounded-4 p-4">
-              <h6 class="fw-semibold">Price Prediction</h6>
-              <p>{{ product.prediction }}</p>
+            <h5 class="fw-bold mb-3">Product Description</h5>
+            <p class="text-secondary leading-relaxed">{{ product.description|default:"No detailed description provided for this product."|linebreaks }}</p>
+            
+            <div class="bg-light rounded-4 p-4 mt-4 border">
+              <h6 class="fw-bold text-primary mb-2">
+                <i class="fas fa-microchip me-2"></i>Machine Learning Model Insights
+              </h6>
+              <p class="mb-2 text-muted">
+                {{ ai_analysis.recommendation_reason }}
+              </p>
+              <div class="d-flex gap-3 flex-wrap small text-muted mt-3 pt-3 border-top">
+                <span><strong>Model:</strong> {{ ai_analysis.model_name|default:"RandomForestRegressor" }}</span>
+                <span><strong>Version:</strong> {{ ai_analysis.model_version|default:"v1.0" }}</span>
+                <span><strong>Forecast Horizon:</strong> 30 Days</span>
+              </div>
             </div>
           </div>
           <div class="tab-pane fade" id="specs" role="tabpanel">
             <dl class="row">
-              <dt class="col-sm-4">Rating</dt><dd class="col-sm-8">{{ product.rating }}</dd>
-              <dt class="col-sm-4">Reviews</dt><dd class="col-sm-8">{{ product.reviews }}</dd>
+              <dt class="col-sm-4">Brand</dt><dd class="col-sm-8">{{ product.brand|default:"General" }}</dd>
+              <dt class="col-sm-4">Category</dt><dd class="col-sm-8">{{ product.category.name }}</dd>
+              <dt class="col-sm-4">Rating</dt><dd class="col-sm-8">{{ product.rating }} ★</dd>
+              <dt class="col-sm-4">Total Reviews</dt><dd class="col-sm-8">{{ product.reviews }}</dd>
               <dt class="col-sm-4">Stock Status</dt><dd class="col-sm-8">{{ product.stock }}</dd>
             </dl>
           </div>
@@ -163,10 +377,10 @@
                 </div>
                 <span class="badge bg-warning text-dark ms-auto">{{ review.rating }} ★</span>
               </div>
-              <p>{{ review.text }}</p>
+              <p class="mb-0 text-secondary">{{ review.text }}</p>
             </div>
             {% empty %}
-            <p class="text-muted">No reviews yet.</p>
+            <p class="text-muted">No reviews yet for this product.</p>
             {% endfor %}
           </div>
         </div>
@@ -174,16 +388,16 @@
     </div>
     <div class="col-12 col-lg-4">
       <div class="card rounded-4 shadow-sm border-0 p-4">
-        <h5 class="fw-bold">Compare Across Stores</h5>
-        <ul class="list-group list-group-flush mt-3">
+        <h5 class="fw-bold mb-3"><i class="fas fa-tags text-primary me-2"></i>Compare Across Stores</h5>
+        <ul class="list-group list-group-flush">
           {% for store in store_compare %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
             <div>
               <strong>{{ store.store }}</strong>
               <p class="text-muted small mb-0">{{ store.delivery }} · {{ store.shipping }}</p>
             </div>
             <div class="text-end">
-              <p class="fw-bold mb-1">₹{{ store.price }}</p>
+              <p class="fw-bold mb-1">₹{{ store.price|floatformat:0 }}</p>
               <span class="badge bg-{{ store.in_stock|yesno:'success,danger' }}">{{ store.in_stock|yesno:'In Stock,Out of Stock' }}</span>
             </div>
           </li>
@@ -193,4 +407,101 @@
     </div>
   </div>
 </div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const ctx = document.getElementById('priceForecastChart');
+    if (!ctx) return;
+
+    const labels = {{ chart_labels_json|safe }};
+    const historyData = {{ chart_history_json|safe }};
+    const forecastData = {{ chart_forecast_json|safe }};
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Actual Price (₹)',
+            data: historyData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            fill: true,
+            tension: 0.25,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#3b82f6',
+            spanGaps: false
+          },
+          {
+            label: 'AI Forecast (₹)',
+            data: forecastData,
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.08)',
+            borderDash: [6, 6],
+            fill: true,
+            tension: 0.25,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#8b5cf6',
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                let val = context.raw;
+                if (val === null || val === undefined) return null;
+                return context.dataset.label + ': ₹' + Number(val).toLocaleString('en-IN');
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 0,
+              font: {
+                size: 11
+              }
+            }
+          },
+          y: {
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              callback: function (val) {
+                return '₹' + Number(val).toLocaleString('en-IN');
+              },
+              font: {
+                size: 11
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
 {% endblock %}
+

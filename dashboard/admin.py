@@ -1,6 +1,8 @@
 from django.contrib import admin
 
 from .models import (
+    AIModelMetric,
+    AIPricePrediction,
     Category,
     Coupon,
     Notification,
@@ -76,3 +78,31 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ["name", "product", "rating", "date"]
+
+
+@admin.register(AIPricePrediction)
+class AIPricePredictionAdmin(admin.ModelAdmin):
+    list_display = [
+        "product",
+        "current_price",
+        "predicted_price_7_days",
+        "predicted_price_14_days",
+        "predicted_price_30_days",
+        "trend",
+        "recommendation",
+        "recommendation_strength",
+        "is_anomaly",
+        "prediction_date",
+    ]
+    list_filter = ["trend", "recommendation", "recommendation_strength", "is_anomaly", "prediction_date"]
+    search_fields = ["product__name", "recommendation_reason", "anomaly_reason"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(AIModelMetric)
+class AIModelMetricAdmin(admin.ModelAdmin):
+    list_display = ["model_name", "model_type", "mae", "rmse", "r2_score", "trained_samples", "is_active", "trained_at"]
+    list_filter = ["model_type", "is_active"]
+    search_fields = ["model_name"]
+    readonly_fields = ["trained_at"]
+

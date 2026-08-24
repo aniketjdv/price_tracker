@@ -100,7 +100,7 @@
   </div>
 
   <!-- Alerts Grid -->
-  <div class="row g-4">
+  <div class="row g-4 mb-4">
     {% for alert in alerts %}
     <div class="col-12 col-md-6 col-xl-4">
       <div class="card rounded-4 shadow-sm border-0 h-100 d-flex flex-column bg-white">
@@ -124,6 +124,13 @@
                     <i class="fas fa-eye me-1"></i>Watching
                   </span>
                 {% endif %}
+                {% with ai_pred=alert.product.ai_predictions.first %}
+                  {% if ai_pred %}
+                    <span class="badge {% if ai_pred.recommendation == 'BUY NOW' %}bg-success text-white{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                      <i class="fas fa-robot me-1"></i>{{ ai_pred.recommendation }}
+                    </span>
+                  {% endif %}
+                {% endwith %}
               </div>
               <h6 class="fw-bold mb-0 text-truncate" title="{{ alert.product.name }}">
                 <a href="{% url 'dashboard:product_detail' alert.product.id %}" class="text-dark text-decoration-none">
@@ -180,7 +187,19 @@
             <a href="{% url 'dashboard:product_detail' alert.product.id %}" class="btn btn-outline-primary btn-sm flex-fill">
               <i class="fas fa-arrow-up-right-from-square me-1"></i>View
             </a>
-            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-bs-toggle="modal" data-bs-target="#editAlertModal-{{ alert.id }}">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm flex-fill btn-edit-alert"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editAlertModal"
+                    data-alert-id="{{ alert.id }}"
+                    data-product-name="{{ alert.product.name }}"
+                    data-product-image="{{ alert.product.image_url }}"
+                    data-current-price="{{ alert.current_price|floatformat:0 }}"
+                    data-target-price="{{ alert.target_price|floatformat:0 }}"
+                    data-status="{{ alert.status }}"
+                    data-email-on="{% if alert.email_on %}true{% else %}false{% endif %}"
+                    data-sms-on="{% if alert.sms_on %}true{% else %}false{% endif %}"
+                    data-edit-url="{% url 'dashboard:edit_price_alert' alert.id %}">
               <i class="fas fa-pen me-1"></i>Edit
             </button>
             {% if alert.status == 'triggered' %}
@@ -191,94 +210,16 @@
                 </button>
               </form>
             {% endif %}
-            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAlertModal-{{ alert.id }}" title="Delete alert">
-              <i class="fas fa-trash"></i>
-            </button>
+            <form method="post" action="{% url 'dashboard:delete_price_alert' alert.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete the price alert for {{ alert.product.name|escapejs }}?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete alert">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Edit Modal for Alert #{{ alert.id }} -->
-    <div class="modal fade" id="editAlertModal-{{ alert.id }}" tabindex="-1" aria-labelledby="editAlertLabel-{{ alert.id }}" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-          <form method="post" action="{% url 'dashboard:edit_price_alert' alert.id %}">
-            {% csrf_token %}
-            <div class="modal-header border-0 pb-0">
-              <h5 class="modal-title fw-bold" id="editAlertLabel-{{ alert.id }}">Edit Price Alert</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-3">
-              <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded-3">
-                <img src="{{ alert.product.image_url }}" alt="{{ alert.product.name }}" class="rounded-3" style="width: 48px; height: 48px; object-fit: cover;" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&auto=format';" />
-                <div class="overflow-hidden">
-                  <h6 class="fw-bold mb-0 text-truncate">{{ alert.product.name }}</h6>
-                  <p class="text-muted small mb-0">Current Price: <strong>₹{{ alert.current_price|floatformat:0 }}</strong></p>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Target Price (₹)</label>
-                <div class="input-group">
-                  <span class="input-group-text">₹</span>
-                  <input type="number" step="1" name="target_price" value="{{ alert.target_price|floatformat:0 }}" class="form-control" required />
-                </div>
-                <small class="text-muted">You will be notified when the price reaches or drops below this amount.</small>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Alert Status</label>
-                <select name="status" class="form-select">
-                  <option value="watching"{% if alert.status == 'watching' %} selected{% endif %}>Watching (Active)</option>
-                  <option value="triggered"{% if alert.status == 'triggered' %} selected{% endif %}>Triggered</option>
-                </select>
-              </div>
-
-              <div class="mb-2">
-                <label class="form-label fw-semibold">Notification Channels</label>
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="checkbox" name="email_on" id="editEmail-{{ alert.id }}" {% if alert.email_on %}checked{% endif %} />
-                  <label class="form-check-label" for="editEmail-{{ alert.id }}">Email Notification</label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" name="sms_on" id="editSms-{{ alert.id }}" {% if alert.sms_on %}checked{% endif %} />
-                  <label class="form-check-label" for="editSms-{{ alert.id }}">SMS Notification</label>
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save Changes</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Modal for Alert #{{ alert.id }} -->
-    <div class="modal fade" id="deleteAlertModal-{{ alert.id }}" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-          <form method="post" action="{% url 'dashboard:delete_price_alert' alert.id %}">
-            {% csrf_token %}
-            <div class="modal-header border-0 pb-0">
-              <h5 class="modal-title fw-bold text-danger">Delete Price Alert</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-3">
-              <p class="mb-0">Are you sure you want to delete the price alert for <strong>{{ alert.product.name }}</strong>?</p>
-              <small class="text-muted">You will no longer receive price-drop notifications for this target price.</small>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-danger">Delete Alert</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
     {% empty %}
     <div class="col-12">
       <div class="card rounded-4 shadow-sm border-0 p-5 text-center bg-white">
@@ -309,7 +250,11 @@
   </div>
 </div>
 
-<!-- Create New Alert Modal -->
+<!-- =========================================================================
+     MODALS (Placed cleanly outside grids for 100% reliable DOM event binding)
+     ========================================================================= -->
+
+<!-- 1. Create New Alert Modal -->
 <div class="modal fade" id="newAlertModal" tabindex="-1" aria-labelledby="newAlertModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow">
@@ -326,7 +271,7 @@
               <option value="" disabled selected>-- Choose a product --</option>
               {% for prod in products %}
                 <option value="{{ prod.id }}" data-price="{{ prod.current_price }}" data-image="{{ prod.image_url }}" data-name="{{ prod.name }}" data-platform="{{ prod.platform.name|default:'' }}">
-                  {{ prod.name }} (₹{{ prod.current_price|floatformat:0 }})
+                  {{ prod.name }} (₹{{ prod.current_price|floatformat:0|intcomma }})
                 </option>
               {% endfor %}
             </select>
@@ -372,7 +317,90 @@
   </div>
 </div>
 
+<!-- 2. Reusable Global Edit Alert Modal -->
+<div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <form method="post" id="editAlertForm" action="">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="editAlertModalLabel">Edit Price Alert</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-3">
+          <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded-3">
+            <img id="editModalProductImage" src="" alt="Product" class="rounded-3" style="width: 48px; height: 48px; object-fit: cover;" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&auto=format';" />
+            <div class="overflow-hidden">
+              <h6 id="editModalProductName" class="fw-bold mb-0 text-truncate"></h6>
+              <p class="text-muted small mb-0">Current Price: <strong>₹<span id="editModalCurrentPrice"></span></strong></p>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="editModalTargetPrice">Target Price (₹)</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" step="1" name="target_price" id="editModalTargetPrice" class="form-control" required />
+            </div>
+            <small class="text-muted">You will be notified when the price reaches or drops below this amount.</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="editModalStatus">Alert Status</label>
+            <select name="status" id="editModalStatus" class="form-select">
+              <option value="watching">Watching (Active)</option>
+              <option value="triggered">Triggered</option>
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Notification Channels</label>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" name="email_on" id="editModalEmailOn" />
+              <label class="form-check-label" for="editModalEmailOn">Email Notification</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="sms_on" id="editModalSmsOn" />
+              <label class="form-check-label" for="editModalSmsOn">SMS Notification</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Reusable Global Delete Alert Modal -->
+<div class="modal fade" id="deleteAlertModal" tabindex="-1" aria-labelledby="deleteAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <form method="post" id="deleteAlertForm" action="">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold text-danger" id="deleteAlertModalLabel">
+            <i class="fas fa-trash me-2"></i>Delete Price Alert
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-3">
+          <p class="mb-1">Are you sure you want to delete the price alert for <strong id="deleteAlertProductName">this product</strong>?</p>
+          <small class="text-muted">You will no longer receive price-drop notifications for this target price.</small>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete Alert</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
+  // Product preview in Create Modal
   function updateProductPreview(selectElem) {
     const selectedOption = selectElem.options[selectElem.selectedIndex];
     const previewBox = document.getElementById('productPreviewBox');
@@ -392,7 +420,6 @@
       previewImage.src = image;
       previewBox.classList.remove('d-none');
 
-      // Auto suggest 10% lower target price if input is empty
       if (!targetPriceInput.value || targetPriceInput.value === '0') {
         const suggestedTarget = Math.round(price * 0.9);
         targetPriceInput.value = suggestedTarget;
@@ -401,6 +428,64 @@
     } else {
       previewBox.classList.add('d-none');
     }
+  }
+
+  // Populate Global Delete Modal on open
+  const deleteModalElem = document.getElementById('deleteAlertModal');
+  if (deleteModalElem) {
+    deleteModalElem.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (button) {
+        const deleteUrl = button.getAttribute('data-delete-url');
+        const productName = button.getAttribute('data-product-name');
+        const form = document.getElementById('deleteAlertForm');
+        const nameElem = document.getElementById('deleteAlertProductName');
+        if (form && deleteUrl) form.action = deleteUrl;
+        if (nameElem && productName) nameElem.textContent = productName;
+      }
+    });
+  }
+
+  // Populate Global Edit Modal on open
+  const editModalElem = document.getElementById('editAlertModal');
+  if (editModalElem) {
+    editModalElem.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (button) {
+        const editUrl = button.getAttribute('data-edit-url');
+        const productName = button.getAttribute('data-product-name');
+        const productImage = button.getAttribute('data-product-image');
+        const currentPrice = button.getAttribute('data-current-price');
+        const targetPrice = button.getAttribute('data-target-price');
+        const status = button.getAttribute('data-status');
+        const emailOn = button.getAttribute('data-email-on') === 'true';
+        const smsOn = button.getAttribute('data-sms-on') === 'true';
+
+        const form = document.getElementById('editAlertForm');
+        if (form && editUrl) form.action = editUrl;
+
+        const nameElem = document.getElementById('editModalProductName');
+        if (nameElem) nameElem.textContent = productName || '';
+
+        const imgElem = document.getElementById('editModalProductImage');
+        if (imgElem && productImage) imgElem.src = productImage;
+
+        const priceElem = document.getElementById('editModalCurrentPrice');
+        if (priceElem) priceElem.textContent = currentPrice ? Math.round(currentPrice).toLocaleString() : '';
+
+        const targetInput = document.getElementById('editModalTargetPrice');
+        if (targetInput) targetInput.value = targetPrice || '';
+
+        const statusSelect = document.getElementById('editModalStatus');
+        if (statusSelect && status) statusSelect.value = status;
+
+        const emailCheckbox = document.getElementById('editModalEmailOn');
+        if (emailCheckbox) emailCheckbox.checked = emailOn;
+
+        const smsCheckbox = document.getElementById('editModalSmsOn');
+        if (smsCheckbox) smsCheckbox.checked = smsOn;
+      }
+    });
   }
 </script>
 {% endblock %}

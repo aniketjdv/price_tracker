@@ -1,0 +1,17 @@
+{
+  "trained_at": "2026-08-24T15:05:22.696058+00:00",
+  "samples_count": 3180,
+  "metrics": {
+    "LinearRegression": {
+      "mae": 1657.76,
+      "rmse": 2210.71,
+      "r2": 0.9908
+    },
+    "RandomForestRegressor": {
+      "mae": 1908.66,
+      "rmse": 2547.01,
+      "r2": 0.9877
+    },
+    "best_model": "LinearRegression"
+  }
+}

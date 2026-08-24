@@ -1,20 +1,546 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}Site Admin - PricePulse{% endblock %}
+{% load humanize %}
+{% block title %}Site Admin & Product Management - PricePulse{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
+  <!-- Page Header -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-    <div><p class="eyebrow text-primary mb-1">CONTROL CENTER</p><h2 class="fw-bold mb-1">Site administration</h2><p class="text-muted mb-0">Manage users and monitor the tracker data.</p></div>
-    <a href="{% url 'admin:index' %}" class="btn btn-outline-primary"><i class="fas fa-shield-halved me-2"></i>Django admin</a>
+    <div>
+      <p class="eyebrow text-primary mb-1">CONTROL CENTER</p>
+      <h2 class="fw-bold mb-1">Site Administration</h2>
+      <p class="text-muted mb-0">Manage catalog products, modify prices and descriptions, and oversee user accounts.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createProductModal">
+        <i class="fas fa-plus"></i>
+        <span>Add Product</span>
+      </button>
+      <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary d-flex align-items-center gap-2" target="_blank">
+        <i class="fas fa-shield-halved"></i>
+        <span>Django Admin</span>
+      </a>
+    </div>
   </div>
+
+  <!-- Metric Summary Cards -->
   <div class="row g-3 mb-4">
-    <div class="col-6 col-xl-3"><div class="card border-0 shadow-sm"><div class="card-body"><p class="text-muted small mb-2">Total users</p><h3 class="mb-0">{{ user_count }}</h3><small class="text-success">{{ active_user_count }} active</small></div></div></div>
-    <div class="col-6 col-xl-3"><div class="card border-0 shadow-sm"><div class="card-body"><p class="text-muted small mb-2">Products</p><h3 class="mb-0">{{ product_count }}</h3><small class="text-muted">Tracked catalog items</small></div></div></div>
-    <div class="col-6 col-xl-3"><div class="card border-0 shadow-sm"><div class="card-body"><p class="text-muted small mb-2">Listings</p><h3 class="mb-0">{{ listing_count }}</h3><small class="text-muted">Marketplace records</small></div></div></div>
-    <div class="col-6 col-xl-3"><div class="card border-0 shadow-sm"><div class="card-body"><p class="text-muted small mb-2">Price alerts</p><h3 class="mb-0">{{ alert_count }}</h3><small class="text-muted">User notifications</small></div></div></div>
+    <div class="col-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm bg-white">
+        <div class="card-body p-3">
+          <p class="text-muted small mb-1 fw-semibold text-uppercase">Total Users</p>
+          <h3 class="fw-bold mb-1">{{ user_count }}</h3>
+          <small class="text-success"><i class="fas fa-user-check me-1"></i>{{ active_user_count }} active accounts</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm bg-white">
+        <div class="card-body p-3">
+          <p class="text-muted small mb-1 fw-semibold text-uppercase">Total Products</p>
+          <h3 class="fw-bold mb-1">{{ product_count }}</h3>
+          <small class="text-primary"><i class="fas fa-boxes-stacked me-1"></i>Catalog items</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm bg-white">
+        <div class="card-body p-3">
+          <p class="text-muted small mb-1 fw-semibold text-uppercase">Store Listings</p>
+          <h3 class="fw-bold mb-1">{{ listing_count }}</h3>
+          <small class="text-muted"><i class="fas fa-store me-1"></i>Marketplace records</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm bg-white">
+        <div class="card-body p-3">
+          <p class="text-muted small mb-1 fw-semibold text-uppercase">Price Alerts</p>
+          <h3 class="fw-bold mb-1">{{ alert_count }}</h3>
+          <small class="text-info"><i class="far fa-bell me-1"></i>User alert triggers</small>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="row g-4">
-    <div class="col-12 col-xl-8"><div class="card border-0 shadow-sm"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0">User management</h5><span class="badge text-bg-light">{{ user_count }} accounts</span></div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>User</th><th>Joined</th><th>Role</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody>{% for user in users %}<tr><td><strong>{{ user.get_username }}</strong><br><small class="text-muted">{{ user.email|default:"No email" }}</small></td><td>{{ user.date_joined|date:"d M Y" }}</td><td>{% if user.is_superuser %}<span class="badge text-bg-danger">Superuser</span>{% elif user.is_staff %}<span class="badge text-bg-primary">Staff</span>{% else %}<span class="badge text-bg-light">Member</span>{% endif %}</td><td>{% if user.is_active %}<span class="text-success">Active</span>{% else %}<span class="text-danger">Disabled</span>{% endif %}</td><td class="text-end">{% if user != request.user %}<form method="post" class="d-inline">{% csrf_token %}<input type="hidden" name="user_id" value="{{ user.id }}"><input type="hidden" name="action" value="toggle_active"><button class="btn btn-sm btn-outline-secondary" title="Toggle active status"><i class="fas fa-user-slash"></i></button></form><form method="post" class="d-inline">{% csrf_token %}<input type="hidden" name="user_id" value="{{ user.id }}"><input type="hidden" name="action" value="toggle_staff"><button class="btn btn-sm btn-outline-primary" title="Toggle staff access"><i class="fas fa-user-gear"></i></button></form><form method="post" class="d-inline" onsubmit="return confirm('Delete this user?');">{% csrf_token %}<input type="hidden" name="user_id" value="{{ user.id }}"><input type="hidden" name="action" value="delete_user"><button class="btn btn-sm btn-outline-danger" title="Delete user"><i class="fas fa-trash"></i></button></form>{% else %}<span class="text-muted small">You</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No users yet.</td></tr>{% endfor %}</tbody></table></div></div></div></div>
-    <div class="col-12 col-xl-4"><div class="card border-0 shadow-sm"><div class="card-body"><h5 class="mb-3">Recent products</h5>{% for product in recent_products %}<div class="d-flex gap-3 align-items-center border-bottom py-2"><img src="{{ product.image_url }}" class="admin-product-thumb" alt=""><div class="min-w-0"><strong class="d-block text-truncate">{{ product.name }}</strong><small class="text-muted">₹{{ product.current_price|floatformat:0 }}</small></div></div>{% empty %}<p class="text-muted">No products yet.</p>{% endfor %}<a href="{% url 'admin:dashboard_product_changelist' %}" class="btn btn-outline-primary btn-sm mt-3">Manage products</a></div></div></div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded-4 shadow-sm border" id="adminTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link rounded-3 px-3 py-2 fw-semibold {% if active_tab == 'products' or not active_tab %}active{% endif %}" id="products-tab" data-bs-toggle="tab" data-bs-target="#products-pane" type="button" role="tab" aria-controls="products-pane" aria-selected="true">
+        <i class="fas fa-box-open me-2"></i>Product Management ({{ product_count }})
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link rounded-3 px-3 py-2 fw-semibold {% if active_tab == 'users' %}active{% endif %}" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" role="tab" aria-controls="users-pane" aria-selected="false">
+        <i class="fas fa-users-gear me-2"></i>User Management ({{ user_count }})
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="adminTabsContent">
+    <!-- 1. PRODUCT MANAGEMENT TAB -->
+    <div class="tab-pane fade {% if active_tab == 'products' or not active_tab %}show active{% endif %}" id="products-pane" role="tabpanel" aria-labelledby="products-tab">
+      <div class="card rounded-4 border-0 shadow-sm bg-white mb-4">
+        <div class="card-body p-3 p-lg-4">
+          <!-- Search & Filter Bar -->
+          <form method="get" action="{% url 'dashboard:admin_dashboard' %}" class="row g-3 align-items-center mb-4">
+            <input type="hidden" name="tab" value="products">
+            <div class="col-12 col-md-4">
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="search" name="q" value="{{ product_query }}" class="form-control bg-light border-start-0" placeholder="Search by title, brand..." />
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <select name="platform" class="form-select">
+                <option value="">All Platforms</option>
+                {% for plat in platforms %}
+                  <option value="{{ plat.name }}" {% if selected_platform == plat.name %}selected{% endif %}>{{ plat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+              <button type="submit" class="btn btn-primary flex-fill">Filter</button>
+              {% if product_query or selected_category or selected_platform %}
+                <a href="{% url 'dashboard:admin_dashboard' %}?tab=products" class="btn btn-outline-secondary" title="Clear filters"><i class="fas fa-rotate-left"></i></a>
+              {% endif %}
+            </div>
+          </form>
+
+          <!-- Products Table -->
+          <div class="table-responsive">
+            <table class="table align-middle table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="min-width: 280px;">PRODUCT DETAILS</th>
+                  <th>STORE</th>
+                  <th>CURRENT</th>
+                  <th>MRP</th>
+                  <th>DISCOUNT</th>
+                  <th>STOCK</th>
+                  <th class="text-end" style="min-width: 140px;">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in products %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center gap-3">
+                        <img src="{{ p.image_url }}" alt="{{ p.name }}" class="admin-product-thumb rounded-3 border" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop&auto=format';" style="width: 48px; height: 48px; object-fit: cover;" />
+                        <div class="min-w-0">
+                          <strong class="d-block text-dark text-truncate" style="max-width: 320px;" title="{{ p.name }}">{{ p.name }}</strong>
+                          <div class="d-flex align-items-center gap-2 small text-muted">
+                            <span>{{ p.category.name|default:"Uncategorized" }}</span>
+                            {% if p.brand %}<span>• {{ p.brand }}</span>{% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {% if p.platform %}
+                        <span class="badge small px-2 py-1" style="background-color: {{ p.platform.bg_color }}; color: {{ p.platform.color }};">
+                          {{ p.platform.name }}
+                        </span>
+                      {% else %}
+                        <span class="badge bg-light text-muted border">None</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <strong class="text-dark">₹{{ p.current_price|floatformat:0|intcomma }}</strong>
+                    </td>
+                    <td class="text-muted text-decoration-line-through">
+                      {% if p.original_price %}
+                        ₹{{ p.original_price|floatformat:0|intcomma }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if p.discount %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ p.discount }}% OFF</span>
+                      {% else %}
+                        <span class="badge bg-light text-muted">0%</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge {% if p.stock == 'In Stock' %}bg-success-subtle text-success border border-success-subtle{% elif p.stock == 'Out of Stock' %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+                        {{ p.stock }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <div class="d-inline-flex gap-1">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm btn-edit-product"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editProductModal"
+                                data-product-id="{{ p.id }}"
+                                data-name="{{ p.name }}"
+                                data-brand="{{ p.brand }}"
+                                data-category-id="{{ p.category.id|default:'' }}"
+                                data-platform-id="{{ p.platform.id|default:'' }}"
+                                data-current-price="{{ p.current_price|floatformat:0 }}"
+                                data-original-price="{{ p.original_price|floatformat:0 }}"
+                                data-lowest-price="{{ p.lowest_price|floatformat:0 }}"
+                                data-discount="{{ p.discount }}"
+                                data-stock="{{ p.stock }}"
+                                data-image-url="{{ p.image_url }}"
+                                data-url="{{ p.url }}"
+                                data-description="{{ p.description }}"
+                                data-prediction="{{ p.prediction }}"
+                                data-action-url="{% url 'dashboard:admin_edit_product' p.id %}"
+                                title="Edit product">
+                          <i class="fas fa-pen"></i>
+                        </button>
+                        <a href="{% url 'dashboard:product_detail' p.id %}" target="_blank" class="btn btn-outline-secondary btn-sm" title="View details">
+                          <i class="fas fa-arrow-up-right-from-square"></i>
+                        </a>
+                        <form method="post" action="{% url 'dashboard:admin_delete_product' p.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete \'{{ p.name|escapejs }}\'?');">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete product">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="7" class="text-muted text-center py-5">
+                      <i class="fas fa-box-open fs-2 text-muted mb-2 d-block"></i>
+                      No products found matching your search criteria.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. USER MANAGEMENT TAB -->
+    <div class="tab-pane fade {% if active_tab == 'users' %}show active{% endif %}" id="users-pane" role="tabpanel" aria-labelledby="users-tab">
+      <div class="card rounded-4 border-0 shadow-sm bg-white mb-4">
+        <div class="card-body p-3 p-lg-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">User Accounts</h5>
+            <span class="badge text-bg-light border">{{ user_count }} accounts</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>USER</th>
+                  <th>JOINED</th>
+                  <th>ROLE</th>
+                  <th>STATUS</th>
+                  <th class="text-end">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for user in users %}
+                  <tr>
+                    <td>
+                      <strong>{{ user.get_username }}</strong>
+                      <br />
+                      <small class="text-muted">{{ user.email|default:"No email" }}</small>
+                    </td>
+                    <td>{{ user.date_joined|date:"d M Y" }}</td>
+                    <td>
+                      {% if user.is_superuser %}
+                        <span class="badge text-bg-danger">Superuser</span>
+                      {% elif user.is_staff %}
+                        <span class="badge text-bg-primary">Staff</span>
+                      {% else %}
+                        <span class="badge text-bg-light">Member</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if user.is_active %}
+                        <span class="badge bg-success-subtle text-success">Active</span>
+                      {% else %}
+                        <span class="badge bg-danger-subtle text-danger">Disabled</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      {% if user != request.user %}
+                        <form method="post" class="d-inline">
+                          {% csrf_token %}
+                          <input type="hidden" name="user_id" value="{{ user.id }}">
+                          <input type="hidden" name="action" value="toggle_active">
+                          <button class="btn btn-sm btn-outline-secondary" title="Toggle active status">
+                            <i class="fas fa-user-slash"></i>
+                          </button>
+                        </form>
+                        <form method="post" class="d-inline">
+                          {% csrf_token %}
+                          <input type="hidden" name="user_id" value="{{ user.id }}">
+                          <input type="hidden" name="action" value="toggle_staff">
+                          <button class="btn btn-sm btn-outline-primary" title="Toggle staff access">
+                            <i class="fas fa-user-gear"></i>
+                          </button>
+                        </form>
+                        <form method="post" class="d-inline" onsubmit="return confirm('Delete user {{ user.username }}?');">
+                          {% csrf_token %}
+                          <input type="hidden" name="user_id" value="{{ user.id }}">
+                          <input type="hidden" name="action" value="delete_user">
+                          <button class="btn btn-sm btn-outline-danger" title="Delete user">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      {% else %}
+                        <span class="text-muted small">You (Active)</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-muted text-center py-4">No users registered yet.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- =========================================================================
+     MODALS FOR PRODUCT MANAGEMENT
+     ========================================================================= -->
+
+<!-- 1. Edit Product Modal -->
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <form method="post" id="editProductForm" action="">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="editProductModalLabel">
+            <i class="fas fa-pen-to-square text-primary me-2"></i>Edit Product
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-3">
+          <div class="row g-3">
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-semibold small" for="editName">Product Name / Title <span class="text-danger">*</span></label>
+              <input type="text" name="name" id="editName" class="form-control" required />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold small" for="editBrand">Brand</label>
+              <input type="text" name="brand" id="editBrand" class="form-control" placeholder="e.g. Sony, Apple" />
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold small" for="editCategory">Category</label>
+              <select name="category" id="editCategory" class="form-select">
+                <option value="">-- Choose Category --</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold small" for="editPlatform">Platform / Store</label>
+              <select name="platform" id="editPlatform" class="form-select">
+                <option value="">-- Choose Store --</option>
+                {% for plat in platforms %}
+                  <option value="{{ plat.id }}">{{ plat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="editCurrentPrice">Current Price (₹) <span class="text-danger">*</span></label>
+              <input type="number" step="1" name="current_price" id="editCurrentPrice" class="form-control" required />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="editOriginalPrice">Original Price (₹)</label>
+              <input type="number" step="1" name="original_price" id="editOriginalPrice" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="editLowestPrice">Lowest Price (₹)</label>
+              <input type="number" step="1" name="lowest_price" id="editLowestPrice" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="editDiscount">Discount (%)</label>
+              <input type="number" step="1" name="discount" id="editDiscount" class="form-control" />
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold small" for="editStock">Stock Status</label>
+              <select name="stock" id="editStock" class="form-select">
+                <option value="In Stock">In Stock</option>
+                <option value="Limited Stock">Limited Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-semibold small" for="editImageUrl">Image URL</label>
+              <input type="url" name="image_url" id="editImageUrl" class="form-control" placeholder="https://..." />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small" for="editUrl">Product Store URL</label>
+              <input type="url" name="url" id="editUrl" class="form-control" placeholder="https://store.example/product/..." />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small" for="editDescription">Description</label>
+              <textarea name="description" id="editDescription" class="form-control" rows="3" placeholder="Enter product description..."></textarea>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small" for="editPrediction">Price Prediction / AI Note</label>
+              <textarea name="prediction" id="editPrediction" class="form-control" rows="2" placeholder="e.g. Price expected to drop next week."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Create Product Modal -->
+<div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <form method="post" action="{% url 'dashboard:admin_create_product' %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="createProductModalLabel">
+            <i class="fas fa-plus-circle text-primary me-2"></i>Add New Product
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-3">
+          <div class="row g-3">
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-semibold small" for="createName">Product Name / Title <span class="text-danger">*</span></label>
+              <input type="text" name="name" id="createName" class="form-control" placeholder="e.g. Apple MacBook Air M3" required />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold small" for="createBrand">Brand</label>
+              <input type="text" name="brand" id="createBrand" class="form-control" placeholder="e.g. Apple" />
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold small" for="createCategory">Category</label>
+              <select name="category" id="createCategory" class="form-select">
+                <option value="">-- Choose Category --</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold small" for="createPlatform">Platform / Store</label>
+              <select name="platform" id="createPlatform" class="form-select">
+                <option value="">-- Choose Store --</option>
+                {% for plat in platforms %}
+                  <option value="{{ plat.id }}">{{ plat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="createCurrentPrice">Current Price (₹) <span class="text-danger">*</span></label>
+              <input type="number" step="1" name="current_price" id="createCurrentPrice" class="form-control" placeholder="99990" required />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="createOriginalPrice">Original Price (₹)</label>
+              <input type="number" step="1" name="original_price" id="createOriginalPrice" class="form-control" placeholder="114900" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="createLowestPrice">Lowest Price (₹)</label>
+              <input type="number" step="1" name="lowest_price" id="createLowestPrice" class="form-control" placeholder="94990" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold small" for="createDiscount">Discount (%)</label>
+              <input type="number" step="1" name="discount" id="createDiscount" class="form-control" placeholder="13" />
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold small" for="createStock">Stock Status</label>
+              <select name="stock" id="createStock" class="form-select">
+                <option value="In Stock" selected>In Stock</option>
+                <option value="Limited Stock">Limited Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-semibold small" for="createImageUrl">Image URL</label>
+              <input type="url" name="image_url" id="createImageUrl" class="form-control" placeholder="https://images.unsplash.com/..." />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small" for="createUrl">Product Store URL</label>
+              <input type="url" name="url" id="createUrl" class="form-control" placeholder="https://www.amazon.in/..." />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small" for="createDescription">Description</label>
+              <textarea name="description" id="createDescription" class="form-control" rows="3" placeholder="Enter detailed product specs and features..."></textarea>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small" for="createPrediction">Price Prediction / AI Note</label>
+              <textarea name="prediction" id="createPrediction" class="form-control" rows="2" placeholder="e.g. Price likely to drop during upcoming festival sale."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary px-4">Create Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Populate Edit Modal on open
+  const editProductModal = document.getElementById('editProductModal');
+  if (editProductModal) {
+    editProductModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (button) {
+        const actionUrl = button.getAttribute('data-action-url');
+        const form = document.getElementById('editProductForm');
+        if (form && actionUrl) form.action = actionUrl;
+
+        document.getElementById('editName').value = button.getAttribute('data-name') || '';
+        document.getElementById('editBrand').value = button.getAttribute('data-brand') || '';
+        document.getElementById('editCategory').value = button.getAttribute('data-category-id') || '';
+        document.getElementById('editPlatform').value = button.getAttribute('data-platform-id') || '';
+        document.getElementById('editCurrentPrice').value = button.getAttribute('data-current-price') || '';
+        document.getElementById('editOriginalPrice').value = button.getAttribute('data-original-price') || '';
+        document.getElementById('editLowestPrice').value = button.getAttribute('data-lowest-price') || '';
+        document.getElementById('editDiscount').value = button.getAttribute('data-discount') || '';
+        document.getElementById('editStock').value = button.getAttribute('data-stock') || 'In Stock';
+        document.getElementById('editImageUrl').value = button.getAttribute('data-image-url') || '';
+        document.getElementById('editUrl').value = button.getAttribute('data-url') || '';
+        document.getElementById('editDescription').value = button.getAttribute('data-description') || '';
+        document.getElementById('editPrediction').value = button.getAttribute('data-prediction') || '';
+      }
+    });
+  }
+</script>
 {% endblock %}
