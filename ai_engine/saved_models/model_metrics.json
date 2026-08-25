@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-08-25T16:07:41.248103+00:00",
+  "trained_at": "2026-08-25T16:14:59.377108+00:00",
   "samples_count": 3180,
   "metrics": {
     "LinearRegression": {

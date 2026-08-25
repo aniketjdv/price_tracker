@@ -19,7 +19,7 @@
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="auth-field"><label for="id_username">USERNAME</label><div class="auth-input"><i class="far fa-user"></i>{{ form.username }}</div></div>
-        <div class="auth-field"><div class="d-flex justify-content-between"><label for="id_password">PASSWORD</label><a href="#">Forgot password?</a></div><div class="auth-input"><i class="fas fa-lock"></i>{{ form.password }}</div></div>
+        <div class="auth-field"><div class="d-flex justify-content-between"><label for="id_password">PASSWORD</label><a href="{% url 'dashboard:forgot_password' %}">Forgot password?</a></div><div class="auth-input"><i class="fas fa-lock"></i>{{ form.password }}</div></div>
         <input type="hidden" name="next" value="{{ next }}" />
         <button class="auth-submit" type="submit">Sign in</button>
       </form>

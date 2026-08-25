@@ -1,4 +1,5 @@
 import json
+import random
 from datetime import date, timedelta
 from decimal import Decimal
 from urllib.parse import urlsplit
@@ -50,6 +51,75 @@ def signup(request):
         login(request, user)
         return redirect("dashboard:dashboard_home")
     return render(request, "dashboard/signup.html", {"form": form})
+
+
+def forgot_password(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard:dashboard_home")
+    
+    error = None
+    identifier = ""
+    if request.method == "POST":
+        identifier = request.POST.get("identifier", "").strip()
+        if not identifier:
+            error = "Please enter your username or registered email."
+        else:
+            user = User.objects.filter(Q(username__iexact=identifier) | Q(email__iexact=identifier)).first()
+            if not user:
+                error = f"No active account found matching '{identifier}'. Please verify and try again."
+            else:
+                # Generate 6-digit simulation OTP
+                otp = f"{random.randint(100000, 999999)}"
+                request.session["reset_user_id"] = user.id
+                request.session["reset_username"] = user.username
+                request.session["reset_otp"] = otp
+                return redirect("dashboard:reset_password")
+                
+    return render(request, "dashboard/forgot_password.html", {"error": error, "identifier": identifier})
+
+
+def reset_password(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard:dashboard_home")
+    
+    user_id = request.session.get("reset_user_id")
+    username = request.session.get("reset_username")
+    otp = request.session.get("reset_otp")
+    
+    if not user_id or not otp:
+        return redirect("dashboard:forgot_password")
+    
+    error = None
+    if request.method == "POST":
+        submitted_otp = request.POST.get("otp", "").strip()
+        new_password = request.POST.get("new_password", "").strip()
+        confirm_password = request.POST.get("confirm_password", "").strip()
+        
+        if submitted_otp != str(otp):
+            error = "Invalid 6-digit verification code. Please check the code provided above."
+        elif len(new_password) < 6:
+            error = "Password must be at least 6 characters long."
+        elif new_password != confirm_password:
+            error = "Passwords do not match. Please re-enter."
+        else:
+            user = User.objects.filter(id=user_id).first()
+            if user:
+                user.set_password(new_password)
+                user.save()
+                # Clear reset session data
+                request.session.pop("reset_user_id", None)
+                request.session.pop("reset_username", None)
+                request.session.pop("reset_otp", None)
+                messages.success(request, f"Password for '{user.username}' has been successfully reset! Please sign in with your new password.")
+                return redirect("dashboard:login")
+            else:
+                error = "Account not found. Please restart the password reset process."
+                
+    return render(request, "dashboard/reset_password.html", {
+        "username": username,
+        "otp": otp,
+        "error": error
+    })
 
 
 def staff_required(view):

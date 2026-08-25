@@ -520,6 +520,60 @@ class AdminProductManagementTests(TestCase):
 		self.assertFalse(Product.objects.filter(id=self.product.id).exists())
 
 
+class ForgotPasswordTests(TestCase):
+	def setUp(self):
+		from django.contrib.auth.models import User
+		self.user = User.objects.create_user(username="demouser", email="demo@example.com", password="oldpassword123")
+
+	def test_forgot_password_page_loads(self):
+		response = self.client.get(reverse("dashboard:forgot_password"))
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Reset Password")
+
+	def test_forgot_password_invalid_user_shows_error(self):
+		response = self.client.post(reverse("dashboard:forgot_password"), {"identifier": "nonexistent_user"})
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "No active account found")
+
+	def test_forgot_password_valid_user_redirects_to_reset(self):
+		response = self.client.post(reverse("dashboard:forgot_password"), {"identifier": "demouser"})
+		self.assertEqual(response.status_code, 302)
+		self.assertIn(reverse("dashboard:reset_password"), response.url)
+		# Verify session holds OTP
+		session = self.client.session
+		self.assertIn("reset_otp", session)
+		self.assertEqual(session["reset_user_id"], self.user.id)
+
+	def test_reset_password_success(self):
+		# First trigger forgot password
+		self.client.post(reverse("dashboard:forgot_password"), {"identifier": "demouser"})
+		otp = self.client.session["reset_otp"]
+
+		# Submit reset with matching OTP
+		response = self.client.post(reverse("dashboard:reset_password"), {
+			"otp": otp,
+			"new_password": "newsecurepassword123",
+			"confirm_password": "newsecurepassword123"
+		})
+		self.assertEqual(response.status_code, 302)
+		self.assertIn(reverse("dashboard:login"), response.url)
+
+		# Verify password changed by logging in
+		login_success = self.client.login(username="demouser", password="newsecurepassword123")
+		self.assertTrue(login_success)
+
+	def test_reset_password_invalid_otp_fails(self):
+		self.client.post(reverse("dashboard:forgot_password"), {"identifier": "demouser"})
+		response = self.client.post(reverse("dashboard:reset_password"), {
+			"otp": "000000",
+			"new_password": "newsecurepassword123",
+			"confirm_password": "newsecurepassword123"
+		})
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Invalid 6-digit verification code")
+
+
+
 
 
 
