@@ -573,6 +573,36 @@ class ForgotPasswordTests(TestCase):
 		self.assertContains(response, "Invalid 6-digit verification code")
 
 
+class AnalyticsPageTests(TestCase):
+	def setUp(self):
+		from django.contrib.auth.models import User
+		self.cat = Category.objects.create(name="Audio & Electronics")
+		self.plat = Platform.objects.create(name="Amazon India", color="#FF9900", bg_color="#FFF7ED")
+		self.product = Product.objects.create(
+			name="Analytics Demo Headphones",
+			category=self.cat,
+			platform=self.plat,
+			current_price=Decimal("14999"),
+			original_price=Decimal("19999"),
+			lowest_price=Decimal("13999"),
+			discount=25,
+			stock="In Stock"
+		)
+
+	def test_analytics_page_renders_successfully(self):
+		response = self.client.get(reverse("dashboard:analytics"))
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Analytics & Market Insights")
+		self.assertContains(response, "Total Savings Potential")
+		self.assertContains(response, "AI Recommendation Ratio")
+		self.assertContains(response, "Top 5 Best Deals in Catalog")
+		self.assertIn("total_savings", response.context)
+		self.assertIn("avg_discount", response.context)
+		self.assertIn("store_stats", response.context)
+		self.assertIn("top_deals", response.context)
+
+
+
 
 
 

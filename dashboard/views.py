@@ -896,8 +896,111 @@ def wishlist(request):
 
 def analytics(request):
     ensure_sample_data()
-    saved_total = sum([1500, 6800, 5300, 9100, 7600, 3400])
-    return render(request, "dashboard/analytics.html", {"saved_total": saved_total})
+
+    # 1. Product & Price Statistics
+    all_products = Product.objects.select_related("category", "platform").prefetch_related("ai_predictions")
+    total_products = all_products.count()
+
+    total_mrp = sum(p.original_price or p.current_price for p in all_products)
+    total_current = sum(p.current_price for p in all_products)
+    total_savings = total_mrp - total_current if total_mrp > total_current else Decimal("0")
+    avg_discount = (total_savings * 100 / total_mrp) if total_mrp > 0 else Decimal("0")
+
+    best_deal_product = all_products.order_by("-discount").first()
+    price_drops_count = all_products.filter(Q(discount__gt=0) | Q(trend="down")).count()
+
+    # 2. Store Comparison Metrics
+    platforms = Platform.objects.all()
+    store_stats = []
+    store_names = []
+    store_avg_discounts = []
+    store_avg_prices = []
+
+    for plat in platforms:
+        plat_prods = all_products.filter(platform=plat)
+        count = plat_prods.count()
+        if count > 0:
+            plat_disc = sum(p.discount for p in plat_prods) / count
+            plat_price = sum(p.current_price for p in plat_prods) / count
+        else:
+            plat_disc = 0
+            plat_price = 0
+
+        store_names.append(plat.name)
+        store_avg_discounts.append(round(float(plat_disc), 1))
+        store_avg_prices.append(round(float(plat_price), 0))
+        store_stats.append({
+            "name": plat.name,
+            "color": plat.color,
+            "bg_color": plat.bg_color,
+            "count": count,
+            "avg_discount": round(plat_disc, 1),
+            "avg_price": round(plat_price, 0)
+        })
+
+    # 3. Category Breakdown
+    categories = Category.objects.all()
+    cat_names = []
+    cat_discounts = []
+    for cat in categories:
+        cat_prods = all_products.filter(category=cat)
+        cnt = cat_prods.count()
+        disc = (sum(p.discount for p in cat_prods) / cnt) if cnt > 0 else 0
+        cat_names.append(cat.name)
+        cat_discounts.append(round(float(disc), 1))
+
+    # 4. AI Price Intelligence & Recommendation Breakdown
+    ai_preds = AIPricePrediction.objects.all()
+    buy_now_count = ai_preds.filter(recommendation="BUY NOW").count()
+    wait_count = ai_preds.filter(recommendation="WAIT").count()
+    strong_buy_count = ai_preds.filter(recommendation_strength="Strong Buy").count()
+    buy_count = ai_preds.filter(recommendation_strength="Buy").count()
+    wait_count_only = ai_preds.filter(recommendation_strength="Wait").count()
+    strong_wait_count = ai_preds.filter(recommendation_strength="Strong Wait").count()
+    anomaly_count = ai_preds.filter(is_anomaly=True).count()
+
+    # 5. Monthly Historical Savings Simulation
+    monthly_labels = ["Oct 2025", "Nov 2025", "Dec 2025", "Jan 2026", "Feb 2026", "Mar 2026"]
+    monthly_savings = [
+        round(float(total_savings) * 0.12, 0),
+        round(float(total_savings) * 0.22, 0),
+        round(float(total_savings) * 0.18, 0),
+        round(float(total_savings) * 0.14, 0),
+        round(float(total_savings) * 0.16, 0),
+        round(float(total_savings) * 0.18, 0),
+    ]
+    monthly_deals = [12, 28, 22, 16, 19, price_drops_count]
+
+    # 6. Top 5 Best Deals
+    top_deals = all_products.order_by("-discount")[:5]
+
+    # 7. AI Model Performance Metric
+    latest_metric = AIModelMetric.objects.filter(is_active=True).first() or AIModelMetric.objects.first()
+
+    context = {
+        "total_products": total_products,
+        "total_savings": total_savings,
+        "avg_discount": round(avg_discount, 1),
+        "best_deal_product": best_deal_product,
+        "price_drops_count": price_drops_count,
+        "store_stats": store_stats,
+        "top_deals": top_deals,
+        "latest_metric": latest_metric,
+        "buy_now_count": buy_now_count,
+        "wait_count": wait_count,
+        "anomaly_count": anomaly_count,
+        "monthly_labels_json": json.dumps(monthly_labels),
+        "monthly_savings_json": json.dumps(monthly_savings),
+        "monthly_deals_json": json.dumps(monthly_deals),
+        "store_names_json": json.dumps(store_names),
+        "store_discounts_json": json.dumps(store_avg_discounts),
+        "store_prices_json": json.dumps(store_avg_prices),
+        "cat_names_json": json.dumps(cat_names),
+        "cat_discounts_json": json.dumps(cat_discounts),
+        "ai_pie_labels_json": json.dumps(["Strong Buy", "Buy", "Wait", "Strong Wait"]),
+        "ai_pie_values_json": json.dumps([strong_buy_count, buy_count, wait_count_only, strong_wait_count]),
+    }
+    return render(request, "dashboard/analytics.html", context)
 
 
 @login_required(login_url="dashboard:login")

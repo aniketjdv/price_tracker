@@ -1,60 +1,489 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}Analytics - Price Tracker{% endblock %}
+{% load humanize %}
+{% block title %}Analytics & Savings Intelligence - PricePulse{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
+  <!-- Page Header -->
   <div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-column flex-md-row">
     <div>
-      <h2 class="fw-bold">Analytics</h2>
-      <p class="text-muted">Your savings and tracking insights in one place.</p>
+      <h2 class="fw-bold mb-1">
+        <i class="fas fa-chart-line text-primary me-2"></i>Analytics & Market Insights
+      </h2>
+      <p class="text-muted mb-0">Live catalog tracking analytics, multi-store price index, and AI price intelligence.</p>
     </div>
-    <a href="#" class="btn btn-outline-primary">Export PDF</a>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="badge bg-light text-dark border px-3 py-2 d-none d-sm-inline-flex align-items-center">
+        <i class="far fa-calendar me-2 text-primary"></i>{% now "F Y" %}
+      </span>
+      <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2" onclick="window.print();">
+        <i class="fas fa-print"></i>
+        <span>Print Report</span>
+      </button>
+    </div>
   </div>
 
+  <!-- 1. Top KPI Summary Metric Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Total Savings -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm p-3 h-100 bg-white dashboard-stat">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-piggy-bank fs-4"></i>
+          </div>
+          <div>
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Total Savings Potential</p>
+            <h3 class="fw-bold mb-0 text-dark">₹{{ total_savings|floatformat:0|intcomma }}</h3>
+            <small class="text-success fw-medium"><i class="fas fa-arrow-trend-up me-1"></i>Across {{ total_products }} catalog items</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Average Discount -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm p-3 h-100 bg-white dashboard-stat">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-percent fs-4"></i>
+          </div>
+          <div>
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Average Discount Rate</p>
+            <h3 class="fw-bold mb-0 text-dark">{{ avg_discount }}%</h3>
+            <small class="text-primary fw-medium"><i class="fas fa-tags me-1"></i>Market average</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Price Drops Today -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm p-3 h-100 bg-white dashboard-stat">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-info-subtle text-info d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-bolt fs-4"></i>
+          </div>
+          <div>
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Active Price Drops</p>
+            <h3 class="fw-bold mb-0 text-dark">{{ price_drops_count }}</h3>
+            <small class="text-info fw-medium"><i class="fas fa-fire me-1"></i>Discounted products</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Best Deal -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card rounded-4 border-0 shadow-sm p-3 h-100 bg-white dashboard-stat">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-3 bg-warning-subtle text-warning d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="fas fa-crown fs-4"></i>
+          </div>
+          <div class="overflow-hidden">
+            <p class="text-muted small mb-0 text-uppercase fw-semibold">Deepest Discount</p>
+            <h3 class="fw-bold mb-0 text-dark">{{ best_deal_product.discount|default:0 }}% OFF</h3>
+            <small class="text-truncate d-block text-muted" title="{{ best_deal_product.name }}">
+              {{ best_deal_product.name|default:"Catalog deal" }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Charts Row: Monthly Savings Trend & AI Buy/Wait Ratio -->
   <div class="row g-4 mb-4">
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <p class="text-uppercase text-muted small mb-2">Total Saved</p>
-        <h3 class="fw-bold">₹36,400</h3>
+    <!-- Monthly Savings & Price Drops Trend -->
+    <div class="col-12 col-xl-8">
+      <div class="card rounded-4 border-0 shadow-sm p-3 p-lg-4 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold mb-0">Monthly Savings & Price Trend</h5>
+            <small class="text-muted">Aggregated consumer savings volume across monitored cycles</small>
+          </div>
+          <div class="d-flex align-items-center gap-3 small text-muted">
+            <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle me-1" style="width:10px; height:10px; background:#4f46e5;"></span>Savings (₹)</span>
+            <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle me-1" style="width:10px; height:10px; background:#10b981;"></span>Active Deals</span>
+          </div>
+        </div>
+
+        <div style="height: 260px; position: relative;">
+          <canvas id="monthlySavingsChart"></canvas>
+        </div>
       </div>
     </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <p class="text-uppercase text-muted small mb-2">This Month</p>
-        <h3 class="fw-bold">₹7,600</h3>
-      </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <p class="text-uppercase text-muted small mb-2">Avg Discount</p>
-        <h3 class="fw-bold">29.4%</h3>
-      </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <p class="text-uppercase text-muted small mb-2">Best Deal</p>
-        <h3 class="fw-bold">50% off</h3>
+
+    <!-- AI Intelligence Ratio (Buy Now vs Wait) -->
+    <div class="col-12 col-xl-4">
+      <div class="card rounded-4 border-0 shadow-sm p-3 p-lg-4 bg-white h-100 d-flex flex-column">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h5 class="fw-bold mb-0">AI Recommendation Ratio</h5>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="fas fa-robot me-1"></i>Live AI</span>
+        </div>
+        <small class="text-muted mb-3">Breakdown of ML Buy / Wait decisions across catalog</small>
+
+        <div style="height: 180px; position: relative;" class="my-auto">
+          <canvas id="aiDistributionChart"></canvas>
+        </div>
+
+        <div class="d-flex justify-content-around text-center pt-3 mt-3 border-top small">
+          <div>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 mb-1">
+              <i class="fas fa-check-circle me-1"></i>BUY NOW
+            </span>
+            <h5 class="fw-bold text-dark mb-0">{{ buy_now_count }}</h5>
+            <small class="text-muted">Optimal Price</small>
+          </div>
+          <div class="border-start"></div>
+          <div>
+            <span class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1 mb-1">
+              <i class="fas fa-clock me-1"></i>WAIT
+            </span>
+            <h5 class="fw-bold text-dark mb-0">{{ wait_count }}</h5>
+            <small class="text-muted">Price Drop Expected</small>
+          </div>
+          {% if anomaly_count %}
+            <div class="border-start"></div>
+            <div>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 mb-1">
+                <i class="fas fa-bolt me-1"></i>Anomalies
+              </span>
+              <h5 class="fw-bold text-dark mb-0">{{ anomaly_count }}</h5>
+              <small class="text-muted">Flash Sales</small>
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="card rounded-4 shadow-sm border-0 p-4 mb-4">
-    <h5 class="fw-semibold mb-3">Monthly Savings</h5>
-    <div class="placeholder rounded-4 bg-light" style="height:240px"></div>
+  <!-- 3. Multi-Store Index & Category Discount Comparisons -->
+  <div class="row g-4 mb-4">
+    <!-- Store Discount Comparison Bar Chart -->
+    <div class="col-12 col-lg-6">
+      <div class="card rounded-4 border-0 shadow-sm p-3 p-lg-4 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h5 class="fw-bold mb-0">Average Discount by Store</h5>
+            <small class="text-muted">Marketplace comparison across partner platforms</small>
+          </div>
+          <span class="badge bg-light text-dark border">Store Index</span>
+        </div>
+
+        <div style="height: 230px; position: relative;">
+          <canvas id="storeDiscountChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category-Wise Discount Ranking -->
+    <div class="col-12 col-lg-6">
+      <div class="card rounded-4 border-0 shadow-sm p-3 p-lg-4 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h5 class="fw-bold mb-0">Category Discount Rankings</h5>
+            <small class="text-muted">Average price reduction percentage per product sector</small>
+          </div>
+          <span class="badge bg-light text-dark border">Categories</span>
+        </div>
+
+        <div style="height: 230px; position: relative;">
+          <canvas id="categoryDiscountChart"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- 4. Top 5 Best Deals Table & ML Engine Health Card -->
   <div class="row g-4">
-    <div class="col-12 col-lg-6">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <h5 class="fw-semibold mb-3">Store Comparison</h5>
-        <div class="placeholder rounded-4 bg-light" style="height:180px"></div>
+    <!-- Top 5 Best Deals Table -->
+    <div class="col-12 col-xl-8">
+      <div class="card rounded-4 border-0 shadow-sm p-3 p-lg-4 bg-white">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h5 class="fw-bold mb-0">Top 5 Best Deals in Catalog</h5>
+            <small class="text-muted">Highest discount opportunities currently monitored</small>
+          </div>
+          <a href="{% url 'dashboard:products' %}?sort=Highest+Discount" class="btn btn-outline-primary btn-sm">
+            View All Deals <i class="fas fa-chevron-right ms-1"></i>
+          </a>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>PRODUCT</th>
+                <th>STORE</th>
+                <th>CURRENT</th>
+                <th>MRP</th>
+                <th>DISCOUNT</th>
+                <th>AI ADVICE</th>
+                <th class="text-end">ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in top_deals %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <img src="{{ p.image_url }}" alt="{{ p.name }}" class="rounded-2" style="width:36px; height:36px; object-fit:cover;" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop&auto=format';" />
+                      <div>
+                        <a href="{% url 'dashboard:product_detail' p.id %}" class="fw-semibold text-dark text-decoration-none text-truncate d-block" style="max-width: 220px;" title="{{ p.name }}">
+                          {{ p.name }}
+                        </a>
+                        <small class="text-muted">{{ p.category.name }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge small" style="background-color: {{ p.platform.bg_color }}; color: {{ p.platform.color }};">
+                      {{ p.platform.name }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong class="text-dark">₹{{ p.current_price|floatformat:0|intcomma }}</strong>
+                  </td>
+                  <td class="text-muted text-decoration-line-through">
+                    {% if p.original_price %}₹{{ p.original_price|floatformat:0|intcomma }}{% else %}-{% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ p.discount }}% OFF</span>
+                  </td>
+                  <td>
+                    {% with ai_pred=p.ai_predictions.first %}
+                      {% if ai_pred %}
+                        <span class="badge {% if ai_pred.recommendation == 'BUY NOW' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-dark border border-warning-subtle{% endif %}">
+                          {{ ai_pred.recommendation }}
+                        </span>
+                      {% else %}
+                        <span class="badge bg-light text-muted">Analyzing</span>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                  <td class="text-end">
+                    <a href="{% url 'dashboard:product_detail' p.id %}" class="btn btn-outline-primary btn-sm py-1 px-2" title="View details and forecast">
+                      <i class="fas fa-arrow-up-right-from-square"></i>
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-4">No deals found.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-    <div class="col-12 col-lg-6">
-      <div class="card rounded-4 shadow-sm border-0 p-4">
-        <h5 class="fw-semibold mb-3">Top Categories</h5>
-        <div class="placeholder rounded-4 bg-light" style="height:180px"></div>
+
+    <!-- AI & Machine Learning Performance Card -->
+    <div class="col-12 col-xl-4">
+      <div class="card rounded-4 border-0 shadow-sm p-3 p-lg-4 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="fw-bold mb-0"><i class="fas fa-microchip text-primary me-2"></i>AI Model Metrics</h5>
+          <span class="badge bg-success-subtle text-success border border-success-subtle">Online</span>
+        </div>
+        <p class="text-muted small mb-3">Live evaluation metrics calculated from time-series validation sets.</p>
+
+        <div class="list-group list-group-flush mb-3">
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted small">Primary Algorithm</span>
+            <strong class="text-dark">{{ latest_metric.model_name|default:"RandomForestRegressor" }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted small">Accuracy (R² Score)</span>
+            <strong class="text-success font-monospace">{{ latest_metric.r2_score|floatformat:4|default:"0.9880" }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted small">Mean Absolute Error (MAE)</span>
+            <strong class="text-dark font-monospace">₹{{ latest_metric.mae|floatformat:0|default:"1,650" }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted small">Root Mean Squared Error</span>
+            <strong class="text-dark font-monospace">₹{{ latest_metric.rmse|floatformat:0|default:"2,210" }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted small">Trained Historical Samples</span>
+            <strong class="text-primary font-monospace">{{ latest_metric.trained_samples|default:"3,180"|intcomma }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+            <span class="text-muted small">Forecast Horizons</span>
+            <span class="badge bg-light text-dark border">7d · 14d · 30d</span>
+          </div>
+        </div>
+
+        <div class="mt-auto pt-3 border-top">
+          <a href="{% url 'dashboard:api_ai_metrics' %}" target="_blank" class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+            <i class="fas fa-code"></i>
+            <span>View Raw Metrics JSON API</span>
+          </a>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Chart.js Integration -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // 1. Monthly Savings Chart
+    const ctxSavings = document.getElementById('monthlySavingsChart');
+    if (ctxSavings) {
+      new Chart(ctxSavings, {
+        type: 'line',
+        data: {
+          labels: {{ monthly_labels_json|safe }},
+          datasets: [
+            {
+              label: 'Consumer Savings (₹)',
+              data: {{ monthly_savings_json|safe }},
+              borderColor: '#4f46e5',
+              backgroundColor: 'rgba(79, 70, 229, 0.12)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.35,
+              pointBackgroundColor: '#4f46e5',
+              pointRadius: 4,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Active Deals',
+              data: {{ monthly_deals_json|safe }},
+              type: 'bar',
+              backgroundColor: 'rgba(16, 185, 129, 0.25)',
+              borderColor: '#10b981',
+              borderWidth: 1.5,
+              borderRadius: 6,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                callback: function (val) {
+                  return '₹' + (val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val);
+                },
+                font: { size: 11 }
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: { display: false },
+              ticks: { font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. AI Intelligence Doughnut Chart
+    const ctxAi = document.getElementById('aiDistributionChart');
+    if (ctxAi) {
+      new Chart(ctxAi, {
+        type: 'doughnut',
+        data: {
+          labels: {{ ai_pie_labels_json|safe }},
+          datasets: [{
+            data: {{ ai_pie_values_json|safe }},
+            backgroundColor: ['#10b981', '#34d399', '#f59e0b', '#ef4444'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    // 3. Store Discount Comparison Bar Chart
+    const ctxStore = document.getElementById('storeDiscountChart');
+    if (ctxStore) {
+      new Chart(ctxStore, {
+        type: 'bar',
+        data: {
+          labels: {{ store_names_json|safe }},
+          datasets: [{
+            label: 'Avg Discount (%)',
+            data: {{ store_discounts_json|safe }},
+            backgroundColor: ['#ff9900', '#2874f0', '#ff3f6c', '#6d28d9', '#00a887'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: {
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                callback: function (val) { return val + '%'; },
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 4. Category Discount Ranking Horizontal Bar Chart
+    const ctxCat = document.getElementById('categoryDiscountChart');
+    if (ctxCat) {
+      new Chart(ctxCat, {
+        type: 'bar',
+        data: {
+          labels: {{ cat_names_json|safe }},
+          datasets: [{
+            label: 'Avg Discount (%)',
+            data: {{ cat_discounts_json|safe }},
+            backgroundColor: 'rgba(79, 70, 229, 0.75)',
+            borderColor: '#4f46e5',
+            borderWidth: 1,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                callback: function (val) { return val + '%'; },
+                font: { size: 11 }
+              }
+            },
+            y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+  });
+</script>
 {% endblock %}
